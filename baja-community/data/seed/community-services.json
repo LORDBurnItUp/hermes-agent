@@ -1,0 +1,74 @@
+[
+  {
+    "id": "bacheo-comunitario-tj",
+    "title": "Community Pothole Repair - Tijuana",
+    "titleEs": "Bacheo Comunitario - Tijuana",
+    "category": "infrastructure",
+    "description": "Volunteer-organized pothole repair initiative covering major boulevards in Tijuana. We provide materials, you provide the hands.",
+    "descriptionEs": "Iniciativa de reparacion de baches organizada por voluntarios cubriendo los principales bulevares de Tijuana. Nosotros proporcionamos materiales, tu las manos.",
+    "location": {
+      "city": "Tijuana",
+      "state": "Baja California",
+      "address": "Various locations across Tijuana",
+      "coordinates": { "lat": 32.5149, "lng": -117.0382 }
+    },
+    "organizerName": "Vecinos Unidos Tijuana",
+    "contactInfo": {
+      "phone": "+52 664 789 0123",
+      "whatsapp": "+52 664 789 0123"
+    },
+    "schedule": "Every Saturday 8:00 AM - 12:00 PM",
+    "volunteerNeeded": true,
+    "tags": ["infrastructure", "potholes", "tijuana", "volunteer"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "farmacia-comunitaria-cdmx",
+    "title": "Community Pharmacy - Free Medicine",
+    "titleEs": "Farmacia Comunitaria - Medicina Gratuita",
+    "category": "medicine",
+    "description": "Free medicine distribution for low-income families. We collect donated medications and distribute them to those who cannot afford prescriptions.",
+    "descriptionEs": "Distribucion gratuita de medicamentos para familias de bajos recursos. Recolectamos medicamentos donados y los distribuimos a quienes no pueden pagar recetas.",
+    "location": {
+      "city": "Ciudad de Mexico",
+      "state": "Ciudad de Mexico",
+      "address": "Col. Tepito, CDMX",
+      "coordinates": { "lat": 19.4413, "lng": -99.1230 }
+    },
+    "organizerName": "Salud Para Todos AC",
+    "contactInfo": {
+      "email": "farmacia@saludparatodos.org",
+      "whatsapp": "+52 55 3456 7890"
+    },
+    "schedule": "Monday - Friday 9:00 AM - 2:00 PM",
+    "volunteerNeeded": true,
+    "tags": ["medicine", "pharmacy", "free", "cdmx", "health"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "limpieza-playa-ensenada",
+    "title": "Beach Cleanup Ensenada",
+    "titleEs": "Limpieza de Playa Ensenada",
+    "category": "cleanup",
+    "description": "Monthly beach cleanup along the Ensenada coastline. Join us to keep our beaches beautiful and protect marine life.",
+    "descriptionEs": "Limpieza mensual de playa a lo largo de la costa de Ensenada. Unete para mantener nuestras playas hermosas y proteger la vida marina.",
+    "location": {
+      "city": "Ensenada",
+      "state": "Baja California",
+      "address": "Playa Hermosa, Ensenada",
+      "coordinates": { "lat": 31.8528, "lng": -116.6260 }
+    },
+    "organizerName": "Oceanos Limpios BC",
+    "contactInfo": {
+      "email": "info@oceanoslimpios.org",
+      "whatsapp": "+52 646 890 1234"
+    },
+    "schedule": "First Saturday of every month, 7:00 AM - 11:00 AM",
+    "volunteerNeeded": true,
+    "tags": ["cleanup", "beach", "environment", "ensenada"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  }
+]

@@ -1,0 +1,85 @@
+[
+  {
+    "id": "colecta-utiles-agosto",
+    "title": "Back to School Supply Drive",
+    "titleEs": "Colecta de Utiles Escolares",
+    "description": "Annual school supply drive for children at Casa Hogar Elim and other orphanages in Tijuana. Drop off supplies or donate online.",
+    "descriptionEs": "Colecta anual de utiles escolares para ninos de Casa Hogar Elim y otros orfanatos en Tijuana. Entrega utiles o dona en linea.",
+    "date": "2026-08-10T09:00:00Z",
+    "endDate": "2026-08-10T15:00:00Z",
+    "location": {
+      "name": "Plaza Rio Tijuana",
+      "city": "Tijuana",
+      "state": "Baja California",
+      "address": "Paseo de los Heroes, Zona Rio",
+      "coordinates": { "lat": 32.5270, "lng": -117.0110 }
+    },
+    "type": "fundraiser",
+    "charityId": "casa-hogar-elim",
+    "registrationUrl": "",
+    "tags": ["school", "supplies", "children", "tijuana", "fundraiser"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "jornada-medica-mayo",
+    "title": "Free Medical Day - Ensenada",
+    "titleEs": "Jornada Medica Gratuita - Ensenada",
+    "description": "Free medical consultations, dental checkups, and vision screenings. Open to everyone. No appointment needed.",
+    "descriptionEs": "Consultas medicas gratuitas, revisiones dentales y examenes de vision. Abierto a todos. No se necesita cita.",
+    "date": "2026-05-20T08:00:00Z",
+    "endDate": "2026-05-20T16:00:00Z",
+    "location": {
+      "name": "Centro Comunitario Ensenada",
+      "city": "Ensenada",
+      "state": "Baja California",
+      "address": "Av. Reforma 123, Zona Centro",
+      "coordinates": { "lat": 31.8667, "lng": -116.5964 }
+    },
+    "type": "medical",
+    "charityId": "clinica-comunitaria-ensenada",
+    "tags": ["medical", "free", "dental", "vision", "ensenada"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "hackathon-comunitario",
+    "title": "Community Tech Hackathon",
+    "titleEs": "Hackathon Tecnologico Comunitario",
+    "description": "Build apps and tools that help solve community problems. Open to all skill levels. Prizes for best community impact projects.",
+    "descriptionEs": "Construye aplicaciones y herramientas que ayuden a resolver problemas comunitarios. Abierto a todos los niveles. Premios para los mejores proyectos de impacto comunitario.",
+    "date": "2026-06-15T09:00:00Z",
+    "endDate": "2026-06-16T18:00:00Z",
+    "location": {
+      "name": "Startup Mexico Hub",
+      "city": "Ciudad de Mexico",
+      "state": "Ciudad de Mexico",
+      "address": "Col. Roma Norte, CDMX",
+      "coordinates": { "lat": 19.4195, "lng": -99.1625 }
+    },
+    "type": "meetup",
+    "tags": ["tech", "hackathon", "community", "cdmx", "coding"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "voluntariado-limpieza-jun",
+    "title": "Boulevard Cleanup Volunteer Day",
+    "titleEs": "Dia de Voluntariado - Limpieza de Bulevar",
+    "description": "Join the community to clean up and beautify the main boulevard. Supplies provided. Lunch included for all volunteers.",
+    "descriptionEs": "Unete a la comunidad para limpiar y embellecer el bulevar principal. Materiales proporcionados. Almuerzo incluido para todos los voluntarios.",
+    "date": "2026-06-01T07:00:00Z",
+    "endDate": "2026-06-01T13:00:00Z",
+    "location": {
+      "name": "Blvd. Agua Caliente",
+      "city": "Tijuana",
+      "state": "Baja California",
+      "address": "Blvd. Agua Caliente, Tijuana",
+      "coordinates": { "lat": 32.5100, "lng": -117.0200 }
+    },
+    "type": "volunteer",
+    "tags": ["cleanup", "volunteer", "tijuana", "boulevard"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  }
+]

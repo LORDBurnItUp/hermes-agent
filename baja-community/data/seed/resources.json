@@ -1,0 +1,269 @@
+[
+  {
+    "id": "get-mexican-passport",
+    "title": "How to Get a Mexican Passport",
+    "titleEs": "Como Obtener un Pasaporte Mexicano",
+    "category": "passport",
+    "description": "Complete step-by-step guide to obtaining or renewing your Mexican passport. Includes required documents, costs, and office locations.",
+    "descriptionEs": "Guia completa paso a paso para obtener o renovar tu pasaporte mexicano. Incluye documentos requeridos, costos y ubicaciones de oficinas.",
+    "steps": [
+      {
+        "order": 1,
+        "title": "Schedule an Appointment",
+        "titleEs": "Agendar una Cita",
+        "description": "Visit the SRE (Secretaria de Relaciones Exteriores) website to schedule your appointment online. Appointments are required - walk-ins are not accepted.",
+        "descriptionEs": "Visita el sitio web de la SRE (Secretaria de Relaciones Exteriores) para agendar tu cita en linea. Las citas son obligatorias - no se aceptan sin cita.",
+        "links": [{ "label": "SRE Appointment System", "url": "https://citas.sre.gob.mx" }],
+        "tips": "Schedule at least 2-3 weeks in advance. Morning appointments tend to have shorter wait times."
+      },
+      {
+        "order": 2,
+        "title": "Gather Required Documents",
+        "titleEs": "Reunir Documentos Requeridos",
+        "description": "Prepare all necessary documents before your appointment. Original documents are required - no copies.",
+        "descriptionEs": "Prepara todos los documentos necesarios antes de tu cita. Se requieren documentos originales - no copias.",
+        "documents": [
+          "Birth certificate (certified copy, not older than 5 years)",
+          "CURP (printed from official website)",
+          "Official photo ID (INE, military ID, or professional license)",
+          "Proof of Mexican nationality"
+        ],
+        "tips": "If your birth certificate is older than 5 years, you can get a new certified copy at the Registro Civil."
+      },
+      {
+        "order": 3,
+        "title": "Pay the Fee",
+        "titleEs": "Pagar la Tarifa",
+        "description": "Pay the passport fee at any authorized bank or online. Keep your payment receipt - you'll need it at your appointment.",
+        "descriptionEs": "Paga la tarifa del pasaporte en cualquier banco autorizado o en linea. Guarda tu recibo de pago - lo necesitaras en tu cita.",
+        "tips": "As of 2026: 1-year passport ~$700 MXN, 3-year ~$1,200 MXN, 6-year ~$1,800 MXN, 10-year ~$2,500 MXN. Prices may vary."
+      },
+      {
+        "order": 4,
+        "title": "Attend Your Appointment",
+        "titleEs": "Asistir a Tu Cita",
+        "description": "Arrive at the SRE office 15 minutes early. Bring all original documents and your payment receipt. You will be photographed and fingerprinted at the office.",
+        "descriptionEs": "Llega a la oficina de la SRE 15 minutos antes. Lleva todos los documentos originales y tu recibo de pago. Te tomaran foto y huellas digitales en la oficina.",
+        "tips": "Wear a plain, light-colored shirt for your photo. No glasses, hats, or earrings."
+      },
+      {
+        "order": 5,
+        "title": "Receive Your Passport",
+        "titleEs": "Recibir Tu Pasaporte",
+        "description": "Your passport will be ready for pickup in approximately 3-5 business days. Bring your appointment receipt and an official ID to collect it.",
+        "descriptionEs": "Tu pasaporte estara listo para recoger en aproximadamente 3-5 dias habiles. Lleva tu recibo de cita y una identificacion oficial para recogerlo."
+      }
+    ],
+    "externalLinks": [
+      { "label": "SRE Official Website", "url": "https://www.gob.mx/sre", "type": "government" },
+      { "label": "Schedule Appointment", "url": "https://citas.sre.gob.mx", "type": "government" }
+    ],
+    "tags": ["passport", "sre", "travel", "identification"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "get-ine-voter-id",
+    "title": "How to Get Your INE Voter ID",
+    "titleEs": "Como Obtener Tu Credencial INE",
+    "category": "id-ine",
+    "description": "The INE (Instituto Nacional Electoral) voter ID is Mexico's most widely accepted form of identification. Here's how to get yours.",
+    "descriptionEs": "La credencial del INE (Instituto Nacional Electoral) es la identificacion mas aceptada en Mexico. Aqui te explicamos como obtener la tuya.",
+    "steps": [
+      {
+        "order": 1,
+        "title": "Find Your Nearest INE Module",
+        "titleEs": "Encuentra Tu Modulo INE Mas Cercano",
+        "description": "Use the INE website to locate the nearest registration module. You can also call 800-433-2000 for information.",
+        "descriptionEs": "Usa el sitio web del INE para localizar el modulo de registro mas cercano. Tambien puedes llamar al 800-433-2000 para informacion.",
+        "links": [{ "label": "INE Module Locator", "url": "https://ubicatumodulo.ine.mx" }]
+      },
+      {
+        "order": 2,
+        "title": "Gather Documents",
+        "titleEs": "Reunir Documentos",
+        "description": "You need proof of identity, proof of address, and proof of Mexican citizenship.",
+        "descriptionEs": "Necesitas comprobante de identidad, comprobante de domicilio y comprobante de nacionalidad mexicana.",
+        "documents": [
+          "Birth certificate or certificate of Mexican nationality",
+          "Proof of address (utility bill, bank statement, not older than 3 months)",
+          "CURP (if available)",
+          "Previous INE (if renewing)"
+        ],
+        "tips": "If you recently moved, make sure your proof of address matches your current residence."
+      },
+      {
+        "order": 3,
+        "title": "Visit the Module",
+        "titleEs": "Visitar el Modulo",
+        "description": "Visit the INE module with your documents. You'll be photographed, fingerprinted, and your signature will be captured digitally. No appointment needed but arrive early.",
+        "descriptionEs": "Visita el modulo del INE con tus documentos. Te tomaran foto, huellas digitales y tu firma sera capturada digitalmente. No se necesita cita pero llega temprano."
+      },
+      {
+        "order": 4,
+        "title": "Pick Up Your Credential",
+        "titleEs": "Recoger Tu Credencial",
+        "description": "Your INE card will be ready in approximately 2-4 weeks. Return to the same module with your receipt to pick it up.",
+        "descriptionEs": "Tu credencial INE estara lista en aproximadamente 2-4 semanas. Regresa al mismo modulo con tu recibo para recogerla."
+      }
+    ],
+    "externalLinks": [
+      { "label": "INE Official Website", "url": "https://www.ine.mx", "type": "government" },
+      { "label": "Find Module", "url": "https://ubicatumodulo.ine.mx", "type": "government" }
+    ],
+    "tags": ["ine", "voter-id", "identification", "credential"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "get-curp",
+    "title": "How to Get or Print Your CURP",
+    "titleEs": "Como Obtener o Imprimir Tu CURP",
+    "category": "curp",
+    "description": "The CURP (Clave Unica de Registro de Poblacion) is your unique population registry key. You can look it up and print it for free online.",
+    "descriptionEs": "La CURP (Clave Unica de Registro de Poblacion) es tu clave unica de registro de poblacion. Puedes consultarla e imprimirla gratis en linea.",
+    "steps": [
+      {
+        "order": 1,
+        "title": "Visit the CURP Website",
+        "titleEs": "Visitar el Sitio Web de CURP",
+        "description": "Go to the official RENAPO website to look up your CURP. You can search by name or by your CURP number if you already have it.",
+        "descriptionEs": "Ve al sitio web oficial de RENAPO para consultar tu CURP. Puedes buscar por nombre o por tu numero de CURP si ya lo tienes.",
+        "links": [{ "label": "CURP Lookup", "url": "https://www.gob.mx/curp" }]
+      },
+      {
+        "order": 2,
+        "title": "Enter Your Information",
+        "titleEs": "Ingresa Tu Informacion",
+        "description": "Enter your full name, date of birth, state of birth, and sex. The system will find your CURP.",
+        "descriptionEs": "Ingresa tu nombre completo, fecha de nacimiento, estado de nacimiento y sexo. El sistema encontrara tu CURP.",
+        "tips": "Use the exact name as it appears on your birth certificate, including accents."
+      },
+      {
+        "order": 3,
+        "title": "Download and Print",
+        "titleEs": "Descargar e Imprimir",
+        "description": "Once found, you can download your CURP as a PDF and print it. This printout is officially valid for most tramites.",
+        "descriptionEs": "Una vez encontrada, puedes descargar tu CURP como PDF e imprimirla. Esta impresion es oficialmente valida para la mayoria de los tramites.",
+        "tips": "If your CURP is not found, you may need to register at your local Registro Civil office."
+      }
+    ],
+    "externalLinks": [
+      { "label": "CURP Official Lookup", "url": "https://www.gob.mx/curp", "type": "government" }
+    ],
+    "tags": ["curp", "identification", "free", "online"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "temporary-residency",
+    "title": "How to Get Temporary Residency in Mexico",
+    "titleEs": "Como Obtener la Residencia Temporal en Mexico",
+    "category": "residency",
+    "description": "Guide for foreigners who want to live in Mexico for more than 180 days. Covers the temporary resident visa and card process.",
+    "descriptionEs": "Guia para extranjeros que quieren vivir en Mexico por mas de 180 dias. Cubre el proceso de visa y tarjeta de residente temporal.",
+    "steps": [
+      {
+        "order": 1,
+        "title": "Apply at a Mexican Consulate",
+        "titleEs": "Solicitar en un Consulado Mexicano",
+        "description": "Visit your nearest Mexican consulate in your home country to apply for a temporary resident visa. You'll need to demonstrate economic solvency.",
+        "descriptionEs": "Visita el consulado mexicano mas cercano en tu pais de origen para solicitar una visa de residente temporal. Necesitaras demostrar solvencia economica.",
+        "documents": [
+          "Valid passport (6+ months validity)",
+          "Completed visa application form",
+          "Passport-size photo",
+          "Proof of economic solvency (bank statements showing ~$2,500 USD/month for 12 months, or ~$42,000 USD in investments)",
+          "Visa fee payment"
+        ],
+        "tips": "Economic solvency requirements change annually. Check the consulate website for current amounts."
+      },
+      {
+        "order": 2,
+        "title": "Enter Mexico with Your Visa",
+        "titleEs": "Entrar a Mexico con Tu Visa",
+        "description": "Once approved, you'll receive a visa sticker in your passport. Enter Mexico and tell immigration you're coming as a temporary resident.",
+        "descriptionEs": "Una vez aprobada, recibiras una etiqueta de visa en tu pasaporte. Entra a Mexico e informa a inmigracion que vienes como residente temporal.",
+        "tips": "You have 180 days from visa issuance to enter Mexico."
+      },
+      {
+        "order": 3,
+        "title": "Complete INM Registration",
+        "titleEs": "Completar Registro en el INM",
+        "description": "Within 30 days of arrival, visit your local INM (Instituto Nacional de Migracion) office to exchange your visa for a resident card.",
+        "descriptionEs": "Dentro de 30 dias de tu llegada, visita tu oficina local del INM (Instituto Nacional de Migracion) para cambiar tu visa por una tarjeta de residente.",
+        "documents": [
+          "Passport with visa",
+          "FMM (immigration form from entry)",
+          "Proof of address in Mexico",
+          "Payment receipt for resident card fee",
+          "Completed INM form"
+        ],
+        "links": [{ "label": "INM Website", "url": "https://www.gob.mx/inm" }],
+        "tips": "The 30-day window is strict. Don't miss it or you may need to restart the process."
+      },
+      {
+        "order": 4,
+        "title": "Receive Your Resident Card",
+        "titleEs": "Recibir Tu Tarjeta de Residente",
+        "description": "Your temporary resident card will be ready in approximately 2-4 weeks. This card is valid for 1-4 years and is renewable.",
+        "descriptionEs": "Tu tarjeta de residente temporal estara lista en aproximadamente 2-4 semanas. Esta tarjeta es valida por 1-4 anos y es renovable.",
+        "tips": "With temporary residency you can get an RFC, open bank accounts, and work (with a separate work permit)."
+      }
+    ],
+    "externalLinks": [
+      { "label": "INM Official Website", "url": "https://www.gob.mx/inm", "type": "government" },
+      { "label": "SRE Consulates", "url": "https://www.gob.mx/sre/acciones-y-programas/directorio-de-representaciones-de-mexico-en-el-exterior", "type": "government" }
+    ],
+    "tags": ["residency", "temporary", "visa", "immigration", "expat"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "register-rfc",
+    "title": "How to Register for Your RFC (Tax ID)",
+    "titleEs": "Como Registrarte para Tu RFC",
+    "category": "rfc",
+    "description": "The RFC (Registro Federal de Contribuyentes) is your Mexican tax identification number. Required for employment, banking, and many tramites.",
+    "descriptionEs": "El RFC (Registro Federal de Contribuyentes) es tu numero de identificacion fiscal mexicano. Requerido para empleo, banca y muchos tramites.",
+    "steps": [
+      {
+        "order": 1,
+        "title": "Pre-register Online",
+        "titleEs": "Pre-registrarse en Linea",
+        "description": "Visit the SAT (Servicio de Administracion Tributaria) website to begin your pre-registration. This generates an appointment.",
+        "descriptionEs": "Visita el sitio web del SAT (Servicio de Administracion Tributaria) para comenzar tu pre-registro. Esto genera una cita.",
+        "links": [{ "label": "SAT Registration", "url": "https://www.sat.gob.mx/aplicacion/operacion/31274/realiza-tu-preinscripcion-en-el-rfc" }]
+      },
+      {
+        "order": 2,
+        "title": "Attend SAT Office",
+        "titleEs": "Asistir a Oficina del SAT",
+        "description": "Visit the SAT office on your scheduled appointment date with all required documents.",
+        "descriptionEs": "Visita la oficina del SAT en la fecha de tu cita programada con todos los documentos requeridos.",
+        "documents": [
+          "CURP",
+          "Official photo ID (INE)",
+          "Proof of address (not older than 3 months)",
+          "Birth certificate",
+          "Email address",
+          "USB drive (for your e.firma digital signature)"
+        ],
+        "tips": "Bring a USB drive! They'll create your e.firma (digital signature) which you'll need for online tax filings."
+      },
+      {
+        "order": 3,
+        "title": "Receive Your RFC and e.firma",
+        "titleEs": "Recibir Tu RFC y e.firma",
+        "description": "You'll receive your RFC number and e.firma digital certificate on the same visit. Keep your e.firma password safe - you'll need it for all SAT operations.",
+        "descriptionEs": "Recibiras tu numero de RFC y certificado digital e.firma en la misma visita. Guarda tu contrasena de e.firma segura - la necesitaras para todas las operaciones del SAT."
+      }
+    ],
+    "externalLinks": [
+      { "label": "SAT Official Website", "url": "https://www.sat.gob.mx", "type": "government" }
+    ],
+    "tags": ["rfc", "tax", "sat", "identification", "employment"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  }
+]

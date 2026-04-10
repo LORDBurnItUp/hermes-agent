@@ -1,0 +1,127 @@
+[
+  {
+    "id": "lic-garcia-immigration",
+    "name": "Lic. Maria Garcia Rodriguez",
+    "category": "lawyer",
+    "specialties": ["immigration", "residency", "work permits", "family law"],
+    "description": "Immigration attorney with 15 years of experience helping expats obtain residency and work permits in Mexico. Fluent in English and Spanish.",
+    "descriptionEs": "Abogada de inmigracion con 15 anos de experiencia ayudando a extranjeros a obtener residencia y permisos de trabajo en Mexico. Habla ingles y espanol.",
+    "location": {
+      "city": "Tijuana",
+      "state": "Baja California",
+      "address": "Zona Rio, Tijuana",
+      "coordinates": { "lat": 32.5227, "lng": -117.0125 }
+    },
+    "contactInfo": {
+      "phone": "+52 664 456 7890",
+      "email": "mgarcia@abogadostj.com",
+      "whatsapp": "+52 664 456 7890"
+    },
+    "languages": ["Spanish", "English"],
+    "credentials": ["UABC Law Degree", "Immigration Law Certification"],
+    "verified": true,
+    "tags": ["immigration", "tijuana", "bilingual", "residency"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "dr-lopez-general",
+    "name": "Dr. Carlos Lopez Mendez",
+    "category": "doctor",
+    "specialties": ["general medicine", "internal medicine", "preventive care"],
+    "description": "Board-certified physician providing comprehensive healthcare. Accepts patients with and without insurance. Home visits available.",
+    "descriptionEs": "Medico certificado que brinda atencion medica integral. Acepta pacientes con y sin seguro. Visitas a domicilio disponibles.",
+    "location": {
+      "city": "Ensenada",
+      "state": "Baja California",
+      "address": "Blvd. Lazaro Cardenas, Ensenada",
+      "coordinates": { "lat": 31.8603, "lng": -116.6064 }
+    },
+    "contactInfo": {
+      "phone": "+52 646 567 8901",
+      "email": "drlopez@medicos.mx",
+      "whatsapp": "+52 646 567 8901"
+    },
+    "languages": ["Spanish", "English"],
+    "credentials": ["UNAM Medical Degree", "Board Certified Internal Medicine"],
+    "verified": true,
+    "tags": ["general-medicine", "ensenada", "bilingual", "home-visits"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "cp-martinez-tax",
+    "name": "C.P. Ana Martinez Soto",
+    "category": "accountant",
+    "specialties": ["tax filing", "RFC registration", "business accounting", "SAT compliance"],
+    "description": "Certified public accountant specializing in tax compliance for both Mexican nationals and foreign residents. Expert in SAT requirements and RFC registration.",
+    "descriptionEs": "Contadora publica certificada especializada en cumplimiento fiscal para mexicanos y residentes extranjeros. Experta en requisitos del SAT y registro de RFC.",
+    "location": {
+      "city": "Ciudad de Mexico",
+      "state": "Ciudad de Mexico",
+      "address": "Col. Roma Norte, CDMX",
+      "coordinates": { "lat": 19.4195, "lng": -99.1625 }
+    },
+    "contactInfo": {
+      "phone": "+52 55 2345 6789",
+      "email": "ana.martinez@contadores.mx",
+      "website": "https://martinezcontadores.mx"
+    },
+    "languages": ["Spanish", "English"],
+    "credentials": ["UNAM Accounting Degree", "CPA Certification"],
+    "verified": true,
+    "tags": ["tax", "rfc", "sat", "cdmx", "accounting"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "trad-wilson-interpreter",
+    "name": "Sarah Wilson de Ramirez",
+    "category": "translator",
+    "specialties": ["legal translation", "medical interpretation", "document translation", "simultaneous interpretation"],
+    "description": "Certified English-Spanish translator and interpreter. Specializes in legal and medical contexts. Available for in-person and remote interpretation.",
+    "descriptionEs": "Traductora e interprete certificada ingles-espanol. Especializada en contextos legales y medicos. Disponible para interpretacion presencial y remota.",
+    "location": {
+      "city": "Tijuana",
+      "state": "Baja California",
+      "address": "Zona Centro, Tijuana",
+      "coordinates": { "lat": 32.5302, "lng": -117.0248 }
+    },
+    "contactInfo": {
+      "phone": "+52 664 678 9012",
+      "email": "sarah@traducciones-tj.com",
+      "whatsapp": "+52 664 678 9012"
+    },
+    "languages": ["English", "Spanish"],
+    "credentials": ["ATA Certified Translator", "Court Interpreter Certification"],
+    "verified": true,
+    "tags": ["translation", "interpretation", "legal", "medical", "tijuana"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "notario-hernandez",
+    "name": "Lic. Roberto Hernandez Flores",
+    "category": "notary",
+    "specialties": ["real estate transactions", "powers of attorney", "wills", "corporate documents"],
+    "description": "Notario Publico serving the Monterrey metropolitan area. Handles property transactions, corporate documents, and all notarial services.",
+    "descriptionEs": "Notario Publico sirviendo la zona metropolitana de Monterrey. Maneja transacciones de propiedad, documentos corporativos y todos los servicios notariales.",
+    "location": {
+      "city": "Monterrey",
+      "state": "Nuevo Leon",
+      "address": "Col. Centro, Monterrey",
+      "coordinates": { "lat": 25.6866, "lng": -100.3161 }
+    },
+    "contactInfo": {
+      "phone": "+52 81 3456 7890",
+      "email": "notaria.hernandez@notarios.mx",
+      "website": "https://notariahernandez.mx"
+    },
+    "languages": ["Spanish"],
+    "credentials": ["Notario Publico #45", "UANL Law Degree"],
+    "verified": true,
+    "tags": ["notary", "real-estate", "monterrey", "legal"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  }
+]

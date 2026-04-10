@@ -1,0 +1,28 @@
+{
+  "id": "",
+  "name": "",
+  "nameEs": "",
+  "description": "",
+  "descriptionEs": "",
+  "category": "orphanage",
+  "location": {
+    "city": "",
+    "state": "",
+    "address": "",
+    "coordinates": { "lat": 0, "lng": 0 }
+  },
+  "contactInfo": {
+    "phone": "",
+    "email": "",
+    "website": "",
+    "facebook": "",
+    "whatsapp": ""
+  },
+  "needs": [],
+  "donationLinks": [],
+  "images": [],
+  "featured": false,
+  "tags": [],
+  "updatedAt": "",
+  "createdAt": ""
+}

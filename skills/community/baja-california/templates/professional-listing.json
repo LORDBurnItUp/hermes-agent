@@ -1,0 +1,26 @@
+{
+  "id": "",
+  "name": "",
+  "category": "lawyer",
+  "specialties": [],
+  "description": "",
+  "descriptionEs": "",
+  "location": {
+    "city": "",
+    "state": "",
+    "address": "",
+    "coordinates": { "lat": 0, "lng": 0 }
+  },
+  "contactInfo": {
+    "phone": "",
+    "email": "",
+    "website": "",
+    "whatsapp": ""
+  },
+  "languages": ["Spanish"],
+  "credentials": [],
+  "verified": false,
+  "tags": [],
+  "updatedAt": "",
+  "createdAt": ""
+}

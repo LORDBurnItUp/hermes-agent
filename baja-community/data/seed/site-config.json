@@ -1,0 +1,20 @@
+{
+  "siteName": "Hermes Community",
+  "siteNameEs": "Comunidad Hermes",
+  "tagline": "Community that Connects",
+  "taglineEs": "Comunidad que Conecta",
+  "stats": {
+    "charitiesSupported": 24,
+    "professionalsListed": 48,
+    "resourcesAvailable": 32,
+    "communityServices": 16,
+    "eventsHosted": 120,
+    "statesReached": 12
+  },
+  "featuredCharityId": "casa-hogar-elim",
+  "socialLinks": {
+    "facebook": "",
+    "instagram": "",
+    "discord": ""
+  }
+}

@@ -1,0 +1,138 @@
+[
+  {
+    "id": "casa-hogar-elim",
+    "name": "Casa Hogar Elim",
+    "nameEs": "Casa Hogar Elim",
+    "description": "A loving home for children in Tijuana providing shelter, education, and emotional support to orphaned and abandoned children since 1990.",
+    "descriptionEs": "Un hogar amoroso para ninos en Tijuana que brinda refugio, educacion y apoyo emocional a ninos huerfanos y abandonados desde 1990.",
+    "category": "orphanage",
+    "location": {
+      "city": "Tijuana",
+      "state": "Baja California",
+      "address": "Col. El Florido, Tijuana",
+      "coordinates": { "lat": 32.4543, "lng": -116.8769 }
+    },
+    "contactInfo": {
+      "phone": "+52 664 123 4567",
+      "email": "info@casahogarelim.org",
+      "website": "https://casahogarelim.org",
+      "facebook": "casahogarelim"
+    },
+    "needs": ["school supplies", "clothing", "volunteers", "food donations"],
+    "donationLinks": [
+      { "label": "PayPal", "url": "https://paypal.me/casahogarelim", "type": "paypal" }
+    ],
+    "images": [],
+    "featured": true,
+    "tags": ["children", "education", "tijuana", "orphanage"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "banco-alimentos-tijuana",
+    "name": "Food Bank of Tijuana",
+    "nameEs": "Banco de Alimentos de Tijuana",
+    "description": "Collecting and distributing food to families in need across the Tijuana metropolitan area. Serving over 5,000 families monthly.",
+    "descriptionEs": "Recolectando y distribuyendo alimentos a familias necesitadas en toda la zona metropolitana de Tijuana. Atendiendo a mas de 5,000 familias mensualmente.",
+    "category": "food-bank",
+    "location": {
+      "city": "Tijuana",
+      "state": "Baja California",
+      "address": "Zona Centro, Tijuana",
+      "coordinates": { "lat": 32.5149, "lng": -117.0382 }
+    },
+    "contactInfo": {
+      "phone": "+52 664 234 5678",
+      "email": "contacto@bancodealimentostj.org",
+      "whatsapp": "+52 664 234 5678"
+    },
+    "needs": ["non-perishable food", "volunteers", "delivery vehicles", "warehouse space"],
+    "donationLinks": [
+      { "label": "Bank Transfer", "url": "#", "type": "bank" }
+    ],
+    "images": [],
+    "featured": false,
+    "tags": ["food", "families", "tijuana", "hunger"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "albergue-juvenil-cdmx",
+    "name": "Youth Shelter CDMX",
+    "nameEs": "Albergue Juvenil de la Ciudad de Mexico",
+    "description": "Emergency shelter for homeless youth in Mexico City providing meals, medical care, counseling, and educational programs.",
+    "descriptionEs": "Albergue de emergencia para jovenes sin hogar en la Ciudad de Mexico que brinda comidas, atencion medica, consejeria y programas educativos.",
+    "category": "shelter",
+    "location": {
+      "city": "Ciudad de Mexico",
+      "state": "Ciudad de Mexico",
+      "address": "Col. Centro, CDMX",
+      "coordinates": { "lat": 19.4326, "lng": -99.1332 }
+    },
+    "contactInfo": {
+      "phone": "+52 55 1234 5678",
+      "email": "info@alberguejuvenilcdmx.org"
+    },
+    "needs": ["blankets", "hygiene kits", "tutors", "mental health professionals"],
+    "donationLinks": [],
+    "images": [],
+    "featured": false,
+    "tags": ["youth", "shelter", "cdmx", "homeless"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "clinica-comunitaria-ensenada",
+    "name": "Ensenada Community Clinic",
+    "nameEs": "Clinica Comunitaria de Ensenada",
+    "description": "Free medical clinic providing healthcare to underserved communities in Ensenada. Services include general medicine, dental, and vision care.",
+    "descriptionEs": "Clinica medica gratuita que brinda atencion medica a comunidades desatendidas en Ensenada. Servicios incluyen medicina general, dental y vision.",
+    "category": "medical",
+    "location": {
+      "city": "Ensenada",
+      "state": "Baja California",
+      "address": "Zona Centro, Ensenada",
+      "coordinates": { "lat": 31.8667, "lng": -116.5964 }
+    },
+    "contactInfo": {
+      "phone": "+52 646 345 6789",
+      "email": "clinica@comunitariaensenada.org",
+      "whatsapp": "+52 646 345 6789"
+    },
+    "needs": ["medical supplies", "volunteer doctors", "medications", "equipment"],
+    "donationLinks": [
+      { "label": "GoFundMe", "url": "https://gofundme.com/clinica-ensenada", "type": "gofundme" }
+    ],
+    "images": [],
+    "featured": false,
+    "tags": ["health", "medical", "ensenada", "free-clinic"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  },
+  {
+    "id": "escuela-esperanza-guadalajara",
+    "name": "Hope School Guadalajara",
+    "nameEs": "Escuela Esperanza Guadalajara",
+    "description": "Providing free education and after-school programs to children from low-income families in Guadalajara's underserved neighborhoods.",
+    "descriptionEs": "Brindando educacion gratuita y programas extracurriculares a ninos de familias de bajos recursos en los barrios desatendidos de Guadalajara.",
+    "category": "education",
+    "location": {
+      "city": "Guadalajara",
+      "state": "Jalisco",
+      "address": "Col. Santa Cecilia, Guadalajara",
+      "coordinates": { "lat": 20.6597, "lng": -103.3496 }
+    },
+    "contactInfo": {
+      "phone": "+52 33 1234 5678",
+      "email": "info@escuelaesperanza.org",
+      "website": "https://escuelaesperanza.org"
+    },
+    "needs": ["teachers", "school supplies", "computers", "books"],
+    "donationLinks": [],
+    "images": [],
+    "featured": false,
+    "tags": ["education", "children", "guadalajara", "school"],
+    "updatedAt": "2026-04-01T00:00:00Z",
+    "createdAt": "2026-03-01T00:00:00Z"
+  }
+]

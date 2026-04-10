@@ -1,0 +1,25 @@
+{
+  "id": "",
+  "title": "",
+  "titleEs": "",
+  "category": "infrastructure",
+  "description": "",
+  "descriptionEs": "",
+  "location": {
+    "city": "",
+    "state": "",
+    "address": "",
+    "coordinates": { "lat": 0, "lng": 0 }
+  },
+  "organizerName": "",
+  "contactInfo": {
+    "phone": "",
+    "email": "",
+    "whatsapp": ""
+  },
+  "schedule": "",
+  "volunteerNeeded": true,
+  "tags": [],
+  "updatedAt": "",
+  "createdAt": ""
+}

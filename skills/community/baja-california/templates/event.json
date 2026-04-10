@@ -1,0 +1,22 @@
+{
+  "id": "",
+  "title": "",
+  "titleEs": "",
+  "description": "",
+  "descriptionEs": "",
+  "date": "",
+  "endDate": "",
+  "location": {
+    "name": "",
+    "city": "",
+    "state": "",
+    "address": "",
+    "coordinates": { "lat": 0, "lng": 0 }
+  },
+  "type": "volunteer",
+  "charityId": "",
+  "registrationUrl": "",
+  "tags": [],
+  "updatedAt": "",
+  "createdAt": ""
+}

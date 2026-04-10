@@ -1,0 +1,24 @@
+{
+  "id": "",
+  "title": "",
+  "titleEs": "",
+  "category": "tramites",
+  "description": "",
+  "descriptionEs": "",
+  "steps": [
+    {
+      "order": 1,
+      "title": "",
+      "titleEs": "",
+      "description": "",
+      "descriptionEs": "",
+      "documents": [],
+      "links": [],
+      "tips": ""
+    }
+  ],
+  "externalLinks": [],
+  "tags": [],
+  "updatedAt": "",
+  "createdAt": ""
+}
