@@ -109,6 +109,8 @@ curl -X POST "$BASE/notebooks/NOTEBOOK_ID/sources:batchCreate" \
 ```bash
 curl -X POST "https://global-discoveryengine.googleapis.com/upload/v1alpha/projects/$PROJECT_NUMBER/locations/$LOCATION/notebooks/NOTEBOOK_ID/sources:uploadFile" \
   -H "Authorization: Bearer $TOKEN" \
+  -H "X-Goog-Upload-File-Name: document.pdf" \
+  -H "X-Goog-Upload-Protocol: raw" \
   -H "Content-Type: application/pdf" \
   --data-binary @./document.pdf
 ```
@@ -148,10 +150,22 @@ curl -X POST "$BASE/notebooks/NOTEBOOK_ID/sources:batchDelete" \
 ```bash
 curl -X POST "$BASE/notebooks/NOTEBOOK_ID/audioOverviews" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json"
+  -H "Content-Type: application/json" \
+  -d '{
+    "sourceIds": [{"id": "SOURCE_ID"}],
+    "episodeFocus": "Key findings and methodology",
+    "languageCode": "en"
+  }'
 ```
 
 Returns a long-running operation. Poll the notebook to check completion status.
+
+#### Get audio overview
+
+```bash
+curl "$BASE/notebooks/NOTEBOOK_ID/audioOverviews/default" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
 #### Check audio overview status
 
@@ -165,9 +179,28 @@ The notebook response includes audio overview state (PROCESSING, COMPLETED, FAIL
 #### Delete an audio overview
 
 ```bash
-curl -X DELETE "$BASE/notebooks/NOTEBOOK_ID/audioOverviews/AUDIO_OVERVIEW_ID" \
+curl -X DELETE "$BASE/notebooks/NOTEBOOK_ID/audioOverviews/default" \
   -H "Authorization: Bearer $TOKEN"
 ```
+
+### Sharing
+
+#### Share a notebook
+
+```bash
+curl -X POST "$BASE/notebooks/NOTEBOOK_ID:share" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountAndRoles": [
+      {"email": "user@example.com", "role": "EDITOR"}
+    ]
+  }'
+```
+
+### Standalone Podcast API
+
+Generate podcast-style audio from sources without creating a notebook. See the official docs at `https://docs.cloud.google.com/gemini/enterprise/notebooklm-enterprise/docs/podcast-api`.
 
 ## Source Types
 
@@ -180,12 +213,13 @@ curl -X DELETE "$BASE/notebooks/NOTEBOOK_ID/audioOverviews/AUDIO_OVERVIEW_ID" \
 
 ## Limits
 
-| Resource | Limit |
-|----------|-------|
-| Sources per notebook | 50 |
-| Pages per source | 500 |
-| File upload size | 200 MB |
-| Notebooks per project | Varies by tier |
+| Resource | Free | Plus/Pro | Enterprise |
+|----------|------|----------|------------|
+| Sources per notebook | 50 | 300 | 300+ |
+| Notebooks per user | 100 | 500 | Higher |
+| Single document size | 200 MB / 500k words | Same | Same |
+| Chat queries per day | 50 | 500 | 5,000+ |
+| Audio overviews per notebook | 1 | 1 | 1 |
 
 ## Error Codes
 
