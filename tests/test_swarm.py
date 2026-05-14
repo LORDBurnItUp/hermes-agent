@@ -149,10 +149,12 @@ def test_supervisor_falls_back_on_node_cap():
 
 def test_supervisor_aborts_on_global_circuit_breaker():
     state = new_state("r1", "Topic")
-    # Total retries: sum(max(v-1, 0)) = 14 > MAX_TOTAL_RETRIES (12).
-    state["attempts"] = {"voiceover": 8, "video_assembly": 7}
+    # "script" has no fallback path, so once it hits its per-node cap the
+    # supervisor either RETRYs (under budget) or ABORTs. Push total
+    # retries past MAX_TOTAL_RETRIES (16) so we land in the ABORT branch.
+    state["attempts"] = {"voiceover": 9, "video_assembly": 9}
     state["node_history"] = [
-        {"node": "voiceover", "status": NodeStatus.FAILED, "attempt": 8, "error": "boom"}
+        {"node": "voiceover", "status": NodeStatus.FAILED, "attempt": 9, "error": "boom"}
     ]
     out = supervise(state, last_node="voiceover")
     assert out["supervisor_decision"] == SupervisorDecision.ABORT
@@ -171,7 +173,14 @@ def test_pipeline_runs_all_nodes_in_dry_run():
         dry_run=True,
     )
     executed = [h["node"] for h in final.get("node_history") or []]
-    assert executed == ["ingest", "script", "voiceover", "video_assembly", "publish"]
+    assert executed == [
+        "ingest",
+        "script",
+        "voiceover",
+        "broll",
+        "video_assembly",
+        "publish",
+    ]
     assert final["audio_url"].startswith("https://example.invalid/dry-run/")
     assert final["shotstack_render_id"].startswith("dryrun-")
     assert final.get("aborted") is False
@@ -181,3 +190,125 @@ def test_pipeline_runs_all_nodes_in_dry_run():
 def test_build_graph_returns_invokable_object():
     g = build_graph(dry_run=True)
     assert hasattr(g, "invoke")
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: script / b-roll / publish
+# ---------------------------------------------------------------------------
+
+
+def test_script_agent_dry_run_returns_complete_bundle():
+    from swarm.script_agent import generate_script
+
+    bundle = generate_script(
+        video_topic="High-Yield Savings vs Money Market",
+        niche="personal_finance",
+        dry_run=True,
+    )
+    assert bundle.video_title
+    assert bundle.script
+    assert bundle.script_caption
+    assert bundle.visual_prompt
+    assert bundle.video_description.endswith("not financial advice.")
+    assert len(bundle.caption_overlays) >= 3
+    assert len(bundle.video_tags) >= 4
+
+
+def test_script_agent_rejects_invalid_json():
+    from swarm.script_agent import _parse_bundle, ScriptGenerationError
+
+    with pytest.raises(ScriptGenerationError):
+        _parse_bundle("not json at all")
+    with pytest.raises(ScriptGenerationError):
+        _parse_bundle('{"video_title": "x"}')  # missing required fields
+
+
+def test_script_agent_parses_fenced_json():
+    from swarm.script_agent import _parse_bundle
+
+    raw = (
+        "```json\n"
+        "{\"video_title\": \"T\", \"script_caption\": \"C\", \"script\": \"S\","
+        " \"caption_overlays\": [\"a\", \"b\"], \"visual_prompt\": \"P\","
+        " \"video_description\": \"D\", \"video_tags\": [\"x\"]}\n"
+        "```"
+    )
+    bundle = _parse_bundle(raw)
+    assert bundle.video_title == "T"
+    assert bundle.caption_overlays == ["a", "b"]
+
+
+def test_broll_agent_dry_run_returns_placeholder():
+    from swarm.broll_agent import generate_broll, PLACEHOLDER_BROLL_URL
+
+    result = generate_broll(prompt="Cinematic finance shot", dry_run=True)
+    assert result.url == PLACEHOLDER_BROLL_URL
+    assert result.provider == "placeholder"
+    assert result.job_id and result.job_id.startswith("dryrun-")
+
+
+def test_broll_agent_rejects_empty_prompt():
+    from swarm.broll_agent import generate_broll, BRollGenerationError
+
+    with pytest.raises(BRollGenerationError):
+        generate_broll(prompt="  ", dry_run=True)
+
+
+def test_video_assembly_uses_state_broll_url():
+    """When broll_url is set on state, the video_assembly node injects it."""
+    from swarm.graph import video_assembly_node
+    from swarm.state import new_state
+
+    state = new_state("r1", "Topic")
+    state["audio_url"] = "https://example.invalid/audio.mp3"
+    state["video_title"] = "T"
+    state["script_caption"] = "C"
+    state["broll_url"] = "https://example.com/generated-broll.mp4"
+    state["caption_overlays"] = ["a", "b"]
+
+    out = video_assembly_node(state, dry_run=True)
+    payload = out["shotstack_payload"]
+    # B-roll track is the last one in the build order; check it contains the injected URL.
+    broll_track = payload["timeline"]["tracks"][-1]
+    sources = [c["asset"]["src"] for c in broll_track["clips"]]
+    assert "https://example.com/generated-broll.mp4" in sources
+
+
+def test_publish_agent_dry_run_returns_shorts_url():
+    from swarm.publish_agent import publish_to_youtube
+
+    result = publish_to_youtube(
+        video_url="https://example.invalid/render.mp4",
+        title="Roth IRA vs Traditional IRA — Quick Guide",
+        description="Educational only — not financial advice.",
+        tags=["roth ira", "personal finance"],
+        dry_run=True,
+    )
+    assert result.video_id.startswith("dryrun-yt-")
+    assert result.url.startswith("https://www.youtube.com/shorts/")
+    assert result.privacy == "private"
+
+
+def test_publish_agent_validates_privacy():
+    from swarm.publish_agent import publish_to_youtube, PublishError
+
+    with pytest.raises(PublishError):
+        publish_to_youtube(
+            video_url="https://x/y.mp4",
+            title="T",
+            description="D",
+            tags=[],
+            privacy="oops",
+            dry_run=True,
+        )
+
+
+def test_full_phase3_pipeline_populates_publish_fields():
+    final = run_pipeline(video_topic="Index Funds 101", dry_run=True)
+    assert final.get("video_title")
+    assert final.get("visual_prompt")
+    assert final.get("broll_url")
+    assert final.get("video_url", "").endswith(".mp4")
+    assert final.get("published_video_id", "").startswith("dryrun-yt-")
+    assert final.get("published_url", "").startswith("https://www.youtube.com/shorts/")
+    assert final.get("published_privacy") == "private"

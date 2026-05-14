@@ -26,6 +26,9 @@ from typing import Any, Callable, Dict, Optional
 
 from swarm import events
 from swarm.audio_agent import AudioGenerationError, generate_voiceover
+from swarm.broll_agent import BRollGenerationError, generate_broll
+from swarm.publish_agent import PublishError, publish_to_youtube
+from swarm.script_agent import ScriptGenerationError, generate_script
 from swarm.state import (
     NodeExecution,
     NodeStatus,
@@ -37,6 +40,7 @@ from swarm.supervisor import supervise
 from swarm.video_assembly import (
     VideoAssemblyError,
     build_shotstack_payload,
+    poll_render_until_done,
     submit_render,
 )
 
@@ -71,31 +75,30 @@ def ingest_node(state: SwarmState) -> SwarmState:
     return state
 
 
-def script_node(state: SwarmState) -> SwarmState:
-    """Generate the narration script for the topic.
+def script_node(state: SwarmState, *, dry_run: bool = False) -> SwarmState:
+    """LLM-backed scripting agent.
 
-    Stubbed for Phase 2 — a downstream PR will plug this into the
-    existing AIAgent or an LLM call. For now, if no script is provided
-    we synthesise a deterministic placeholder so the rest of the
-    pipeline can run end-to-end.
+    Calls Anthropic / OpenAI (per ``SWARM_SCRIPT_PROVIDER``) and stores
+    every downstream field in state:
+        video_title, script_caption, script, caption_overlays,
+        visual_prompt, video_description, video_tags
+    Invalid JSON or empty fields raise ``ScriptGenerationError``, which
+    propagates to the supervisor for retry with backoff.
     """
     with _track(state, "script"):
-        if not state.get("script"):
-            topic = state["video_topic"]
-            state["script"] = (
-                f"Welcome to today's quick guide on {topic}. "
-                "In the next thirty seconds you'll learn three actionable "
-                "tips you can apply this week. Tip one: start small and "
-                "automate. Tip two: track every dollar. Tip three: "
-                "reinvest the gains. Subscribe for more."
-            )
-        if not state.get("caption_overlays"):
-            state["caption_overlays"] = [
-                state["video_topic"],
-                "Tip 1 — Automate it",
-                "Tip 2 — Track every dollar",
-                "Tip 3 — Reinvest the gains",
-            ]
+        bundle = generate_script(
+            video_topic=state["video_topic"],
+            niche=state.get("niche") or "personal_finance",
+            duration_seconds=30.0,
+            dry_run=dry_run,
+        )
+        state["video_title"] = bundle.video_title
+        state["script_caption"] = bundle.script_caption
+        state["script"] = bundle.script
+        state["caption_overlays"] = bundle.caption_overlays or [bundle.script_caption]
+        state["visual_prompt"] = bundle.visual_prompt
+        state["video_description"] = bundle.video_description
+        state["video_tags"] = bundle.video_tags
     return state
 
 
@@ -112,20 +115,49 @@ def voiceover_node(state: SwarmState, *, dry_run: bool = False) -> SwarmState:
     return state
 
 
+def broll_node(state: SwarmState, *, dry_run: bool = False) -> SwarmState:
+    """Generative B-roll. Takes ``visual_prompt`` from the script agent and
+    asks Sora/Veo for a single MP4. Failure raises ``BRollGenerationError``
+    for the supervisor; dry-run yields a stable placeholder URL.
+    """
+    with _track(state, "broll"):
+        prompt = state.get("visual_prompt") or f"Cinematic finance B-roll for {state['video_topic']}"
+        result = generate_broll(
+            prompt=prompt,
+            duration_seconds=30.0,
+            dry_run=dry_run,
+        )
+        state["broll_url"] = result.url
+        state["broll_provider"] = result.provider
+    return state
+
+
 def video_assembly_node(state: SwarmState, *, dry_run: bool = False) -> SwarmState:
-    """Build the Shotstack JSON edit-decision list and submit the render."""
+    """Build the Shotstack JSON edit-decision list and submit the render.
+
+    If ``state['broll_url']`` was populated by the broll_node, it is the
+    sole asset in the B-roll track (looped across the timeline by
+    Shotstack). Otherwise we fall back to the niche-keyed stock pool.
+    """
     with _track(state, "video_assembly"):
         audio_url = state.get("audio_url")
         if not audio_url:
             raise VideoAssemblyError(
                 "video_assembly_node requires audio_url from the voiceover node."
             )
+
+        broll_urls: Optional[list] = None
+        if state.get("broll_url"):
+            broll_urls = [state["broll_url"]]
+
         payload = build_shotstack_payload(
-            video_title=state["video_topic"],
-            script_caption=(state.get("caption_overlays") or [state["video_topic"]])[0],
+            video_title=state.get("video_title") or state["video_topic"],
+            script_caption=state.get("script_caption")
+            or (state.get("caption_overlays") or [state["video_topic"]])[0],
             audio_url=audio_url,
             niche=state.get("niche") or "personal_finance",
             overlay_lines=state.get("caption_overlays") or None,
+            broll_urls=broll_urls,
         )
         state["shotstack_payload"] = payload
 
@@ -135,14 +167,34 @@ def video_assembly_node(state: SwarmState, *, dry_run: bool = False) -> SwarmSta
     return state
 
 
-def publish_node(state: SwarmState) -> SwarmState:
-    """Stub publish step. Real uploader lands in a later PR."""
+def publish_node(state: SwarmState, *, dry_run: bool = False) -> SwarmState:
+    """Poll Shotstack until done, download MP4, upload to YouTube."""
     with _track(state, "publish"):
+        render_id = state.get("shotstack_render_id")
+        if not render_id:
+            raise PublishError("publish_node requires a shotstack_render_id.")
+
+        video_url = poll_render_until_done(render_id, dry_run=dry_run)
+        state["video_url"] = video_url
+
+        publish = publish_to_youtube(
+            video_url=video_url,
+            title=state.get("video_title") or state["video_topic"],
+            description=state.get("video_description")
+            or f"{state['video_topic']} — Educational content only.",
+            tags=state.get("video_tags") or ["personal finance", "shorts"],
+            dry_run=dry_run,
+        )
+        state["published_video_id"] = publish.video_id
+        state["published_url"] = publish.url
+        state["published_privacy"] = publish.privacy
         events.publish(
             {
-                "type": "publish.queued",
+                "type": "publish.complete",
                 "run_id": state.get("run_id"),
-                "render_id": state.get("shotstack_render_id"),
+                "video_id": publish.video_id,
+                "url": publish.url,
+                "privacy": publish.privacy,
             }
         )
     return state
@@ -202,14 +254,16 @@ def build_graph(*, dry_run: bool = False):
     g = StateGraph(SwarmState)
 
     g.add_node("ingest", ingest_node)
-    g.add_node("script", script_node)
+    g.add_node("script", lambda s: script_node(s, dry_run=dry_run))
     g.add_node("voiceover", lambda s: voiceover_node(s, dry_run=dry_run))
+    g.add_node("broll", lambda s: broll_node(s, dry_run=dry_run))
     g.add_node("video_assembly", lambda s: video_assembly_node(s, dry_run=dry_run))
-    g.add_node("publish", publish_node)
+    g.add_node("publish", lambda s: publish_node(s, dry_run=dry_run))
 
     g.add_node("sup_ingest", _supervise("ingest"))
     g.add_node("sup_script", _supervise("script"))
     g.add_node("sup_voiceover", _supervise("voiceover"))
+    g.add_node("sup_broll", _supervise("broll"))
     g.add_node("sup_video_assembly", _supervise("video_assembly"))
     g.add_node("sup_publish", _supervise("publish"))
 
@@ -231,8 +285,15 @@ def build_graph(*, dry_run: bool = False):
     g.add_edge("voiceover", "sup_voiceover")
     g.add_conditional_edges(
         "sup_voiceover",
+        _route("broll"),
+        {"broll": "broll", END: LG_END, "voiceover": "voiceover"},
+    )
+
+    g.add_edge("broll", "sup_broll")
+    g.add_conditional_edges(
+        "sup_broll",
         _route("video_assembly"),
-        {"video_assembly": "video_assembly", END: LG_END, "voiceover": "voiceover"},
+        {"video_assembly": "video_assembly", END: LG_END, "broll": "broll"},
     )
 
     g.add_edge("video_assembly", "sup_video_assembly")
@@ -270,10 +331,11 @@ class ManualGraph:
         self.dry_run = dry_run
         self.NODES = [
             ("ingest", ingest_node),
-            ("script", script_node),
+            ("script", lambda s: script_node(s, dry_run=dry_run)),
             ("voiceover", lambda s: voiceover_node(s, dry_run=dry_run)),
+            ("broll", lambda s: broll_node(s, dry_run=dry_run)),
             ("video_assembly", lambda s: video_assembly_node(s, dry_run=dry_run)),
-            ("publish", publish_node),
+            ("publish", lambda s: publish_node(s, dry_run=dry_run)),
         ]
 
     def invoke(self, state: SwarmState) -> SwarmState:

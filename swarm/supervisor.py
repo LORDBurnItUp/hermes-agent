@@ -34,11 +34,12 @@ NODE_MAX_ATTEMPTS: Dict[str, int] = {
     "ingest": 1,
     "script": 3,
     "voiceover": 3,
+    "broll": 3,
     "video_assembly": 4,
-    "publish": 3,
+    "publish": 4,
 }
 DEFAULT_MAX_ATTEMPTS = 2
-MAX_TOTAL_RETRIES = 12  # circuit breaker: sum across all nodes
+MAX_TOTAL_RETRIES = 16  # circuit breaker: sum across all nodes
 
 
 def supervise(state: SwarmState, *, last_node: str) -> SwarmState:
@@ -106,8 +107,15 @@ def supervise(state: SwarmState, *, last_node: str) -> SwarmState:
 
 
 def _fallback_or_abort(node: str) -> SupervisorDecision:
-    """Nodes with an alternate path return FALLBACK; otherwise ABORT."""
-    if node in {"voiceover", "video_assembly"}:
+    """Nodes with an alternate path return FALLBACK; otherwise ABORT.
+
+    - ``broll`` falls back to the niche stock pool already wired into
+      ``video_assembly_node``.
+    - ``voiceover`` falls back (Phase 4: Edge TTS).
+    - ``video_assembly`` falls back (Phase 4: deferred queue).
+    Every other terminal failure aborts the run.
+    """
+    if node in {"voiceover", "broll", "video_assembly"}:
         return SupervisorDecision.FALLBACK
     return SupervisorDecision.ABORT
 

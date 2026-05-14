@@ -1,13 +1,21 @@
-"""Phase 2 deliverable: print a sample Shotstack JSON payload for a test
-finance video, then run one end-to-end pipeline call in dry-run mode.
+"""End-to-end demo runner for the Swarm OS.
+
+Phase 2 deliverable: prints a sample Shotstack JSON payload.
+Phase 3 deliverable: drives the full pipeline
+    Ingest -> Script (LLM) -> Voiceover -> B-Roll -> Assembly -> Publish
 
 Usage::
 
-    python -m swarm.demo                    # built-in finance topic
-    python -m swarm.demo --csv path.csv     # iterate a CSV of topics
+    python -m swarm.demo                       # built-in finance topic
+    python -m swarm.demo --csv path.csv        # iterate a CSV of topics
+    python -m swarm.demo --live                # hit real APIs (needs keys)
 
-No API keys required — both ElevenLabs and Shotstack are stubbed unless
-``--live`` is passed (which requires ELEVENLABS_API_KEY and SHOTSTACK_API_KEY).
+API keys required only with ``--live``:
+    ANTHROPIC_API_KEY (or OPENAI_API_KEY) for script_node
+    ELEVENLABS_API_KEY + ELEVENLABS_AUDIO_PUT_URL for voiceover_node
+    SWARM_BROLL_PROVIDER=sora|veo + relevant credentials for broll_node
+    SHOTSTACK_API_KEY for video_assembly_node
+    YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET / YOUTUBE_REFRESH_TOKEN for publish_node
 """
 
 from __future__ import annotations
@@ -83,9 +91,16 @@ def main(argv: list[str] | None = None) -> int:
         )
         print("\n--- Final state summary ---")
         print(f"  run_id           : {final.get('run_id')}")
+        print(f"  video_title      : {final.get('video_title')}")
+        print(f"  script_caption   : {final.get('script_caption')}")
+        print(f"  visual_prompt    : {final.get('visual_prompt')}")
         print(f"  audio_url        : {final.get('audio_url')}")
+        print(f"  broll_url        : {final.get('broll_url')} (provider={final.get('broll_provider')})")
         print(f"  shotstack_render : {final.get('shotstack_render_id')}")
-        print(f"  status           : {final.get('shotstack_status')}")
+        print(f"  rendered_mp4     : {final.get('video_url')}")
+        print(f"  published_url    : {final.get('published_url')}")
+        print(f"  privacy          : {final.get('published_privacy')}")
+        print(f"  tags             : {final.get('video_tags')}")
         print(f"  aborted          : {final.get('aborted', False)}")
         print(f"  nodes executed   : {[h['node'] for h in final.get('node_history') or []]}")
 

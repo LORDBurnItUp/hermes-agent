@@ -35,18 +35,19 @@ brand-style variation per video. The Swarm OS optimises for **throughput
 ## 2. High-Level Architecture
 
 ```
-   +--------------+        +--------------+        +-------------------+
-   | CSV / Sheets |  --->  | ingest_node  |  --->  | script_node (LLM) |
-   +--------------+        +--------------+        +-------------------+
-                                                            |
-                                                            v
-   +--------------------+        +-------------------+   +-------------+
-   | publish_node       | <----  | video_assembly    |<--| voiceover   |
-   | (YouTube upload)   |        | (Shotstack JSON)  |   | (ElevenLabs)|
-   +--------------------+        +-------------------+   +-------------+
-            ^                              ^                    ^
-            |                              |                    |
-            +------- Auto-Healing Supervisor (after every node) +
+  +--------------+      +--------------+      +-------------------+      +-------------+
+  | CSV / Sheets |----->| ingest_node  |----->| script_node (LLM) |----->| voiceover   |
+  +--------------+      +--------------+      +-------------------+      | (ElevenLabs)|
+                                                                         +------+------+
+                                                                                |
+                                                                                v
+   +------------------+      +-------------------+      +----------------------+
+   | publish_node     |<-----| video_assembly    |<-----| broll_node           |
+   | (YouTube v3 API) |      | (Shotstack JSON)  |      | (Sora / Veo)         |
+   +--------+---------+      +---------+---------+      +----------+-----------+
+            ^                          ^                           ^
+            |                          |                           |
+            +-------- Auto-Healing Supervisor (after every node) --+
                                   |
                                   v
                        +---------------------+
@@ -66,13 +67,16 @@ Repo layout (`swarm/`):
 | ----------------------------- | ------------------------------------------------- |
 | `state.py`                    | `SwarmState` TypedDict; node + supervisor enums   |
 | `csv_ingest.py`               | Bulk topic ingestion (`TopicRow`)                 |
+| `script_agent.py`             | LLM-backed script writer (Anthropic/OpenAI)       |
 | `audio_agent.py`              | ElevenLabs TTS via raw `requests`                 |
+| `broll_agent.py`              | Generative B-roll (Sora/Veo) + dry-run fallback   |
 | `video_assembly.py`           | Shotstack JSON builder + `/render` POST + poll    |
+| `publish_agent.py`            | YouTube Data API v3 resumable upload              |
 | `supervisor.py`               | Auto-healing retry / fallback / circuit breaker   |
 | `graph.py`                    | LangGraph wiring + ManualGraph fallback           |
 | `events.py`                   | In-process event bus (sync → asyncio.Queue)       |
 | `sse.py` + `live_view.html`   | FastAPI SSE endpoint and dashboard UI             |
-| `demo.py`                     | Phase 2 deliverable runner (prints sample JSON)   |
+| `demo.py`                     | End-to-end runner (prints sample JSON + run)      |
 
 ---
 
@@ -305,11 +309,128 @@ sharding to lift the upload ceiling).
 
 | Phase | Scope                                                                           | Status     |
 | ----- | ------------------------------------------------------------------------------- | ---------- |
-| 1     | LangGraph backend scaffold, SSE bus, event schema, repo skeleton                | Implicit prereq (covered by this PR's bus + graph) |
-| **2** | **Shotstack + ElevenLabs + video_assembly_node + CSV ingestion + Live View**    | **This PR** |
-| 3     | LLM-backed `script_node`, real publish to YouTube, dynamic B-roll search        | Next       |
-| 4     | Multi-channel sharding, performance feedback loop, A/B title generation         | Later      |
-| 5     | Multi-niche tenancy, per-tenant quotas, billing                                 | Later      |
+| 1     | LangGraph backend scaffold, SSE bus, event schema, repo skeleton                | Done (Phase 2 PR) |
+| 2     | Shotstack + ElevenLabs + video_assembly_node + CSV ingestion + Live View        | Done       |
+| **3** | **LLM `script_node`, generative B-roll, YouTube `publish_node`**                | **This PR** |
+| 4     | Edge-TTS voiceover fallback, deferred-render queue, performance feedback loop   | Next       |
+| 5     | Multi-channel sharding, A/B title generation, multi-niche tenancy, billing      | Later      |
+
+---
+
+## 11. Phase 3: Intelligence & Distribution
+
+### 11.1 `script_node` — `swarm/script_agent.py`
+
+LLM-backed scriptwriter. Defaults to **Anthropic Claude** (project
+already depends on `anthropic`); flip `SWARM_SCRIPT_PROVIDER=openai` to
+route through OpenAI's `chat.completions` with `response_format=
+json_object`. Both providers return the same `ScriptBundle`:
+
+```
+video_title       -> {{VIDEO_TITLE}} merge field + YouTube title
+script_caption    -> {{SCRIPT_CAPTION}} hero caption
+script            -> full narration handed to ElevenLabs
+caption_overlays  -> rolling captions burned on screen
+visual_prompt     -> forwarded to broll_node (Sora/Veo)
+video_description -> YouTube description (CTA + "not financial advice")
+video_tags        -> deduped lowercase YouTube tags
+```
+
+Validation: `_parse_bundle` strips `​```json` fences, parses JSON,
+enforces every required field is present with the correct type, and
+raises `ScriptGenerationError` on any deviation. The supervisor sees
+that exception and retries with backoff — same circuit it used for
+Shotstack timeouts in Phase 2.
+
+System prompt forbids specific financial advice and forces JSON-only
+output. Dry-run mode short-circuits to a deterministic stub so CI and
+demos run without credits.
+
+### 11.2 `broll_node` — `swarm/broll_agent.py`
+
+Provider-agnostic generative-video step. Concrete providers:
+
+- **`SoraProvider`** — POST `/v1/videos` (`model=sora-2`, `9:16`,
+  duration clamped to 4–60s), poll `GET /v1/videos/{id}` until
+  `status="succeeded"`, return `output.url`.
+- **`VeoProvider`** — POST `predictLongRunning` on the Vertex AI
+  publisher endpoint for `veo-3.1-generate-preview`, poll
+  `fetchPredictOperation`, return the first `videos[0].uri`.
+
+`SWARM_BROLL_PROVIDER` (`sora`/`veo`) selects the provider. If unset
+**or** `dry_run=True`, `generate_broll` returns a deterministic
+placeholder URL (a Shotstack-hosted finance B-roll asset) keyed by a
+SHA-1 of the visual prompt — handy for traceability across reruns.
+
+Failures raise `BRollGenerationError`. The supervisor maps the
+`broll` node to `FALLBACK`, so a Sora/Veo outage transparently
+degrades to the niche stock pool already wired into
+`video_assembly_node`.
+
+### 11.3 Injection into Shotstack
+
+When `state['broll_url']` is set, `video_assembly_node` passes it as a
+single-element `broll_urls` list to `build_shotstack_payload`. The
+helper already supports the override (it distributes any provided URLs
+evenly across the timeline), so no schema change in Shotstack land.
+
+### 11.4 `publish_node` — `swarm/publish_agent.py`
+
+Two stages:
+
+1. **Render polling.** `poll_render_until_done(render_id)` polls
+   Shotstack every 5s until `response.status == "done"` and returns the
+   final MP4 URL (or raises on `failed` / timeout).
+2. **YouTube resumable upload.** OAuth exchange via
+   `oauth2.googleapis.com/token` using a refresh-token grant
+   (`YOUTUBE_CLIENT_ID` / `_SECRET` / `_REFRESH_TOKEN` env vars).
+   Streams the rendered MP4 to a temp file, initialises a resumable
+   upload session against `/upload/youtube/v3/videos?uploadType=resumable`,
+   PUTs the bytes, and returns the new `videoId`.
+
+Privacy defaults to `private`; flip `YOUTUBE_DEFAULT_PRIVACY` or pass
+`privacy="unlisted"|"public"` once a channel has been QA'd. The
+upload metadata (`title`, `description`, `tags[]`,
+`selfDeclaredMadeForKids=false`) all comes from the `script_node`
+bundle — no operator touch required.
+
+Failures (rate limit, token expiry, network) raise `PublishError`. The
+supervisor treats `publish` as ABORT-on-cap (no fallback path), with
+4 retries per run inside the global 16-retry circuit breaker.
+
+### 11.5 Updated supervisor budgets
+
+```python
+NODE_MAX_ATTEMPTS = {
+    "ingest": 1,
+    "script": 3,
+    "voiceover": 3,
+    "broll": 3,
+    "video_assembly": 4,
+    "publish": 4,
+}
+MAX_TOTAL_RETRIES = 16
+```
+
+FALLBACK-eligible nodes: `voiceover`, `broll`, `video_assembly`.
+
+### 11.6 Env-var summary (live mode)
+
+```
+ANTHROPIC_API_KEY          # script_node (default provider)
+OPENAI_API_KEY             # script_node alt provider (set SWARM_SCRIPT_PROVIDER=openai)
+ELEVENLABS_API_KEY         # voiceover_node
+ELEVENLABS_AUDIO_PUT_URL   # pre-signed S3 PUT for MP3 hosting
+SWARM_BROLL_PROVIDER       # "sora" | "veo" | unset (placeholder)
+SORA_API_KEY               # or OPENAI_API_KEY for Sora
+GOOGLE_API_KEY             # Veo
+GOOGLE_CLOUD_PROJECT       # Veo
+SHOTSTACK_API_KEY          # video_assembly_node
+YOUTUBE_CLIENT_ID          # publish_node
+YOUTUBE_CLIENT_SECRET      # publish_node
+YOUTUBE_REFRESH_TOKEN      # publish_node (one-time OAuth setup)
+YOUTUBE_DEFAULT_PRIVACY    # optional override of "private"
+```
 
 ---
 

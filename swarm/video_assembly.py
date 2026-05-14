@@ -233,3 +233,40 @@ def poll_render(
             f"Shotstack /render/{render_id} HTTP {resp.status_code}: {resp.text[:200]}"
         )
     return resp.json() or {}
+
+
+def poll_render_until_done(
+    render_id: str,
+    *,
+    api_key: Optional[str] = None,
+    stage: str = DEFAULT_STAGE,
+    interval: float = 5.0,
+    timeout: int = 600,
+    dry_run: bool = False,
+) -> str:
+    """Block until Shotstack returns the final MP4 URL.
+
+    Returns the rendered ``url`` field. Raises ``VideoAssemblyError`` if
+    the render fails or the overall timeout elapses.
+    """
+    if dry_run:
+        return f"https://example.invalid/dry-run/renders/{render_id}.mp4"
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        body = poll_render(render_id, api_key=api_key, stage=stage)
+        response = body.get("response") or {}
+        status = (response.get("status") or "").lower()
+        if status == "done":
+            url = response.get("url")
+            if not url:
+                raise VideoAssemblyError(f"Shotstack render {render_id} done but no url.")
+            return url
+        if status == "failed":
+            raise VideoAssemblyError(
+                f"Shotstack render {render_id} failed: {response.get('error') or response}"
+            )
+        time.sleep(interval)
+    raise VideoAssemblyError(
+        f"Shotstack render {render_id} did not complete within {timeout}s."
+    )
