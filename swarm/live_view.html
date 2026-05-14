@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Swarm OS — Live View</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font: 14px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+           margin: 0; padding: 24px; background:#0b1020; color:#e6e6f0; }
+    h1 { font-size: 18px; margin: 0 0 16px; letter-spacing: .04em; }
+    .grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
+    .pane { background:#141a30; border:1px solid #232a45; border-radius:8px;
+            padding:12px; max-height: 80vh; overflow:auto; }
+    .pane h2 { font-size: 13px; margin: 0 0 8px; color:#9aa3c7; text-transform: uppercase; letter-spacing:.08em;}
+    .run { border-left: 3px solid #2c8efc; padding: 4px 8px; margin: 6px 0;
+           background: #1a2140; border-radius: 4px; }
+    .run.done   { border-color: #34c759; }
+    .run.error  { border-color: #ff453a; }
+    .event { padding: 4px 6px; border-bottom: 1px solid #1d2342; }
+    .event time { color:#7c87b8; margin-right: 8px; font-size: 12px;}
+    .tag { display:inline-block; padding: 0 6px; border-radius: 3px; font-size: 11px;
+           margin-right: 6px; background:#283058; color:#cfd6f5; }
+    .tag.ok    { background:#0f5132; color:#9ce5b1; }
+    .tag.fail  { background:#5b1f1f; color:#ffb4ad; }
+    .tag.retry { background:#5b4a1f; color:#ffd96b; }
+    .stat { font-size: 12px; color:#9aa3c7; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>SWARM OS — LIVE VIEW</h1>
+  <div class="grid">
+    <div class="pane">
+      <h2>Active Runs</h2>
+      <div id="runs"></div>
+      <div class="stat" id="connection">connecting…</div>
+    </div>
+    <div class="pane">
+      <h2>Event Log</h2>
+      <div id="log"></div>
+    </div>
+  </div>
+<script>
+(() => {
+  const runs = new Map();
+  const runsEl = document.getElementById('runs');
+  const logEl = document.getElementById('log');
+  const conn = document.getElementById('connection');
+
+  function fmt(ts) { return new Date((ts || Date.now()/1000) * 1000).toLocaleTimeString(); }
+  function tagFor(type) {
+    if (type === 'node.success' || type === 'run.complete') return 'ok';
+    if (type === 'node.error' || type === 'run.aborted') return 'fail';
+    if (type === 'supervisor.decision') return 'retry';
+    return '';
+  }
+  function renderRuns() {
+    runsEl.innerHTML = '';
+    for (const [id, r] of runs) {
+      const div = document.createElement('div');
+      div.className = 'run' + (r.state === 'done' ? ' done' : r.state === 'error' ? ' error' : '');
+      div.innerHTML = `<strong>${r.topic || id}</strong><br/>
+        <small>${r.node || 'queued'} · attempt ${r.attempt || 1}</small>`;
+      runsEl.appendChild(div);
+    }
+  }
+  function logEvent(e) {
+    const row = document.createElement('div');
+    row.className = 'event';
+    const tag = tagFor(e.type);
+    row.innerHTML = `<time>${fmt(e.ts)}</time>
+      <span class="tag ${tag}">${e.type}</span>
+      ${e.run_id ? `<small>${e.run_id}</small>` : ''}
+      ${e.node ? ` · ${e.node}` : ''}
+      ${e.decision ? ` → ${e.decision}` : ''}
+      ${e.error ? ` <span style="color:#ffb4ad">${e.error}</span>` : ''}`;
+    logEl.prepend(row);
+    while (logEl.children.length > 200) logEl.removeChild(logEl.lastChild);
+  }
+
+  const src = new EventSource('./events');
+  src.onopen = () => { conn.textContent = 'connected'; };
+  src.onerror = () => { conn.textContent = 'disconnected — retrying'; };
+  src.onmessage = (msg) => {
+    const e = JSON.parse(msg.data);
+    logEvent(e);
+    if (!e.run_id) return;
+    const r = runs.get(e.run_id) || { topic: '', node: '', attempt: 1, state: 'active' };
+    if (e.type === 'run.start') r.topic = e.topic;
+    if (e.type === 'node.start') { r.node = e.node; r.attempt = e.attempt; }
+    if (e.type === 'node.success') r.node = e.node + ' ✓';
+    if (e.type === 'node.error')   { r.node = e.node + ' ✗'; r.state = 'error'; }
+    if (e.type === 'run.complete') r.state = 'done';
+    if (e.type === 'run.aborted')  r.state = 'error';
+    runs.set(e.run_id, r);
+    renderRuns();
+  };
+})();
+</script>
+</body>
+</html>

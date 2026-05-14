@@ -1,0 +1,341 @@
+# Swarm OS — Technical & Strategic Architecture
+
+> Autonomous YouTube automation for high-RPM niches (personal finance,
+> passive income, stock education). LangGraph-orchestrated, cloud-rendered,
+> auto-healing, observable.
+
+---
+
+## 1. Context & Strategic Frame
+
+The Swarm OS exists to remove humans from the inner loop of repeatable
+video production. The economic premise is simple: in finance-adjacent
+niches a single algorithmically-priced ad slot is worth 5–30× a generic
+lifestyle slot, but the manual workflow (research → script → record →
+edit → thumbnail → upload) is the cost ceiling on output. Replace that
+loop with software and the only remaining cost is API spend, which
+scales sub-linearly.
+
+Strategic targets:
+
+| Lever                              | Mechanism                             | Expected impact                         |
+| ---------------------------------- | ------------------------------------- | --------------------------------------- |
+| Eliminate manual timeline editing  | Shotstack JSON edit-decision list     | 20–40+ hours/week of engineer time back |
+| Eliminate voice booth labour       | ElevenLabs TTS via REST               | Hours → seconds per video               |
+| Eliminate orchestration glue       | LangGraph StateGraph + Supervisor     | Pipelines self-heal; no human babysit   |
+| Eliminate ops blind spots          | Live View SSE dashboard               | Real-time visibility into every run     |
+| Eliminate brittle local rendering  | Cloud render (no FFmpeg)              | Zero infra to maintain                  |
+
+Non-goals (deliberately): visual novelty, hand-edited cinematic cuts,
+brand-style variation per video. The Swarm OS optimises for **throughput
+× watch-time × CPM**, not per-video craft.
+
+---
+
+## 2. High-Level Architecture
+
+```
+   +--------------+        +--------------+        +-------------------+
+   | CSV / Sheets |  --->  | ingest_node  |  --->  | script_node (LLM) |
+   +--------------+        +--------------+        +-------------------+
+                                                            |
+                                                            v
+   +--------------------+        +-------------------+   +-------------+
+   | publish_node       | <----  | video_assembly    |<--| voiceover   |
+   | (YouTube upload)   |        | (Shotstack JSON)  |   | (ElevenLabs)|
+   +--------------------+        +-------------------+   +-------------+
+            ^                              ^                    ^
+            |                              |                    |
+            +------- Auto-Healing Supervisor (after every node) +
+                                  |
+                                  v
+                       +---------------------+
+                       | Live View (SSE)     |
+                       | /swarm/events       |
+                       +---------------------+
+```
+
+Every worker node returns control to the **Supervisor**, which inspects
+`node_history`, decides `CONTINUE / RETRY / FALLBACK / ABORT`, and
+publishes a `supervisor.decision` event to the Live View bus before
+LangGraph's conditional edge fires.
+
+Repo layout (`swarm/`):
+
+| File                          | Role                                              |
+| ----------------------------- | ------------------------------------------------- |
+| `state.py`                    | `SwarmState` TypedDict; node + supervisor enums   |
+| `csv_ingest.py`               | Bulk topic ingestion (`TopicRow`)                 |
+| `audio_agent.py`              | ElevenLabs TTS via raw `requests`                 |
+| `video_assembly.py`           | Shotstack JSON builder + `/render` POST + poll    |
+| `supervisor.py`               | Auto-healing retry / fallback / circuit breaker   |
+| `graph.py`                    | LangGraph wiring + ManualGraph fallback           |
+| `events.py`                   | In-process event bus (sync → asyncio.Queue)       |
+| `sse.py` + `live_view.html`   | FastAPI SSE endpoint and dashboard UI             |
+| `demo.py`                     | Phase 2 deliverable runner (prints sample JSON)   |
+
+---
+
+## 3. Multi-Agent Framework Choice: LangGraph vs CrewAI
+
+| Dimension                    | LangGraph                                          | CrewAI                                                  | Pick for Swarm OS |
+| ---------------------------- | -------------------------------------------------- | ------------------------------------------------------- | ----------------- |
+| Topology                     | Explicit directed graph w/ conditional edges       | Role-based crew, manager delegates by description       | LangGraph         |
+| State model                  | Typed shared state (TypedDict / Pydantic)          | Implicit task-context passing                           | LangGraph         |
+| Cycles & retries             | First-class loops, conditional edges, breakpoints  | Limited; manager has to re-issue tasks                  | LangGraph         |
+| Determinism                  | Edges are static; routing is data-driven           | LLM-driven delegation is non-deterministic              | LangGraph         |
+| Observability                | Node-level hooks, LangSmith trace, easy SSE bridge | Crew-level logs, less granular                          | LangGraph         |
+| Time to first prototype      | Higher (graph wiring)                              | Lower (declare crew + tasks)                            | CrewAI for spikes |
+| Long-running, idempotent ops | Strong — checkpointing, resumable runs             | Weaker — re-running whole crew is common                | LangGraph         |
+| Best fit                     | **Production pipelines with retries & SLAs**       | Brainstorms, research crews, exploratory agent teams    |                   |
+
+**Decision:** LangGraph is the spine of the Swarm OS. We may still embed
+a CrewAI "research crew" inside the `script_node` later (one node, one
+crew) when the script generation needs multi-persona ideation (writer +
+fact-checker + hook-doctor). The two frameworks compose cleanly because
+CrewAI's crew has a single function-call entry point. The principle:
+**LangGraph owns the assembly line; CrewAI is a station on the line.**
+
+---
+
+## 4. The Programmatic Media Supply Chain (Phase 2)
+
+### 4.1 Audio — `swarm/audio_agent.py`
+
+- Pure `requests` POST to `https://api.elevenlabs.io/v1/text-to-speech/{voice_id}`.
+- Returns raw MP3 bytes, which are uploaded via a caller-supplied
+  `uploader(bytes, filename) -> url` or a pre-signed S3 PUT URL
+  (`ELEVENLABS_AUDIO_PUT_URL`).
+- `dry_run=True` short-circuits to a deterministic stub URL so demos and
+  unit tests don't burn credits.
+- Failure surfaces as `AudioGenerationError`, caught by the supervisor.
+
+### 4.2 Video — `swarm/video_assembly.py`
+
+- `build_shotstack_payload(...)` constructs the edit-decision list as a
+  plain `dict`:
+  - **Soundtrack track** with the ElevenLabs URL.
+  - **B-roll track** distributed evenly across the duration; B-roll
+    pool is niche-keyed (`personal_finance`, `passive_income`,
+    `stock_education`).
+  - **Title-card clip** (4s) with merge field `{{VIDEO_TITLE}}`.
+  - **Rolling caption track** with HTML clips, one per overlay line,
+    each carrying a `merge` substitution for `{{SCRIPT_CAPTION}}`.
+- Output defaults to 9:16 HD MP4 at 30 fps (YouTube Shorts profile).
+- `submit_render(payload)` POSTs to Shotstack's stage `/render` endpoint
+  and returns a `render_id` — *no FFmpeg, no local encoding*.
+- `poll_render(render_id)` is a single GET; the supervisor decides
+  cadence (it's not a tight loop).
+
+### 4.3 Data ingestion — `swarm/csv_ingest.py`
+
+- `ingest_topics_from_csv(path) -> list[TopicRow]`
+- Columns: `video_topic` (required), `script_caption`, `niche`,
+  `voice_id`, `duration_seconds`. Extra columns preserved in `extras`.
+- Comment lines (`#…`) skipped; encoding defaults to `utf-8-sig` so
+  Excel exports work unmodified.
+- `iter_topic_payloads(rows)` adapts directly to `run_pipeline(**kwargs)`,
+  so a 500-row spreadsheet becomes 500 LangGraph runs with one for-loop.
+
+### 4.4 LangGraph wiring — `swarm/graph.py`
+
+- `SwarmState` flows through `ingest → script → voiceover →
+  video_assembly → publish`.
+- Each worker node is followed by a `sup_<node>` supervisor node and a
+  `add_conditional_edges` block that maps the supervisor's decision to
+  one of `{next_node, same_node, __end__}`.
+- If `langgraph` isn't installed (e.g. lightweight CI image), `build_graph()`
+  returns a `ManualGraph` that executes the same nodes in order using
+  the same supervisor. This keeps `swarm.demo` runnable on a bare
+  Python install.
+
+---
+
+## 5. Auto-Healing Supervisor Logic
+
+The supervisor is a pure function over `SwarmState`. It runs between
+every pair of nodes and produces one of four decisions:
+
+| Decision  | When                                                 | What LangGraph does                       |
+| --------- | ---------------------------------------------------- | ----------------------------------------- |
+| CONTINUE  | Last node `SUCCESS`                                  | Route to the next stage                   |
+| RETRY     | Last node `FAILED` & under per-node attempt cap      | Re-enter the same node after backoff      |
+| FALLBACK  | Per-node cap hit on a node with an alternate path    | Skip to next stage (state flags partial)  |
+| ABORT     | Total retries ≥ `MAX_TOTAL_RETRIES` or fatal node    | Route to `END`, emit `run.aborted` event  |
+
+### 5.1 Retry budget
+
+```python
+NODE_MAX_ATTEMPTS = {
+    "ingest": 1,
+    "script": 3,
+    "voiceover": 3,
+    "video_assembly": 4,
+    "publish": 3,
+}
+MAX_TOTAL_RETRIES = 12  # global circuit breaker
+```
+
+- Backoff: `2^(attempt-1)` seconds capped at 30, with full jitter — the
+  AWS "Exponential Backoff and Jitter" formula, prevents thundering-herd
+  on shared upstream APIs (Shotstack, ElevenLabs).
+- The **circuit breaker** is a hard ceiling on cumulative retries across
+  a run. It exists to protect the API budget: a misconfigured payload
+  that 4xx's forever can otherwise burn the entire monthly quota in
+  minutes.
+
+### 5.2 Fallback semantics
+
+`FALLBACK` is reserved for nodes where degraded completion is better
+than nothing:
+
+- **voiceover fallback**: skip premium ElevenLabs voice → fall through;
+  Phase 3 will plug in Edge TTS (free) as the fallback.
+- **video_assembly fallback**: skip render; Phase 3 will queue the
+  payload to a delayed retry job so a Shotstack outage doesn't lose the
+  script.
+
+Every other failure escalates to `ABORT`.
+
+### 5.3 Idempotency
+
+Each node carries an idempotency contract:
+
+- `script_node` is keyed by `(video_topic, niche)` and is safe to repeat.
+- `voiceover_node` writes to a content-hashed S3 key — repeats overwrite.
+- `video_assembly_node`'s Shotstack call is idempotent per `run_id` +
+  payload hash (the Supervisor stores the last successful `render_id`
+  so a retry will reuse rather than re-pay).
+
+### 5.4 Observability surface
+
+Every supervisor decision emits a `supervisor.decision` event
+(`run_id`, `node`, `decision`, `attempt`, `delay_s`, `error`). Combined
+with the `node.start / node.success / node.error` events emitted by the
+worker nodes themselves, the Live View has a complete state machine
+trace per run.
+
+---
+
+## 6. Live View — Real-Time Dashboard
+
+### 6.1 Functional requirements
+
+- **One concurrent operator, dozens of concurrent runs.** The dashboard
+  must summarise the fleet at a glance and let the operator drill into
+  a single run.
+- **Latency:** events visible in the UI within ~250 ms of node entry.
+- **No polling.** The page opens an `EventSource` to `/swarm/events`
+  and renders updates as they arrive.
+- **Resilient to disconnects.** Reconnects automatically and replays
+  via the SSE `Last-Event-ID` header (Phase 3 — current build replays
+  only since-connect).
+
+### 6.2 Non-functional requirements
+
+| Requirement       | Implementation                                                         |
+| ----------------- | ---------------------------------------------------------------------- |
+| Single-process    | In-memory `asyncio.Queue` per subscriber                               |
+| Multi-process     | Swap `events._subscribers` for Redis pub/sub or NATS subject — no node-side change |
+| Backpressure      | Per-subscriber `maxsize=1024` queue; drops with WARN log on overflow   |
+| Proxy compatibility | `cache-control: no-cache`, `x-accel-buffering: no`, 15-s keep-alive comment |
+| Auth              | Mount under FastAPI auth dependency (Phase 3)                          |
+
+### 6.3 Event schema
+
+```
+{ "type": "run.start",            "run_id": "...", "topic": "...", "niche": "..." }
+{ "type": "node.start",           "run_id": "...", "node": "...", "attempt": 1 }
+{ "type": "node.success",         "run_id": "...", "node": "...", "duration_s": 1.23 }
+{ "type": "node.error",           "run_id": "...", "node": "...", "error": "..." }
+{ "type": "supervisor.decision",  "run_id": "...", "node": "...", "decision": "retry|continue|fallback|abort", "attempt": 2, "delay_s": 1.7 }
+{ "type": "run.complete",         "run_id": "..." }
+{ "type": "run.aborted",          "run_id": "...", "failed_node": "...", "error": "..." }
+```
+
+The browser client in `swarm/live_view.html` colours runs by state
+(blue = active, green = done, red = aborted) and tags events by type.
+
+### 6.4 Mounting
+
+```python
+from fastapi import FastAPI
+from swarm.sse import attach_live_view
+
+app = FastAPI()
+attach_live_view(app, mount="/swarm")
+# Dashboard: GET /swarm/    Stream: GET /swarm/events
+```
+
+---
+
+## 7. YouTube Automation Workflow
+
+End-to-end, per video, the system performs:
+
+1. **Topic ingestion** — pop a `TopicRow` from a CSV, Google Sheet sync,
+   or a niche-tuned trend miner.
+2. **Script generation** — LLM call (deferred from Phase 2 stub) keyed
+   by `niche`. Prompt template is held in `prompts/` and version
+   controlled; output is constrained to ~150 wpm × duration.
+3. **Voiceover synthesis** — ElevenLabs `eleven_turbo_v2_5` for cost,
+   `eleven_multilingual_v2` for higher-quality flagship videos. Voice
+   id is per-channel (consistent host = retention).
+4. **Visual assembly** — Shotstack JSON. Phase 2 ships static B-roll
+   pools per niche; Phase 3 will integrate Pexels/Pixabay search keyed
+   by script entities.
+5. **Render** — Shotstack cloud renders MP4 in 9:16. Average finance
+   short renders in 30–90s.
+6. **Publish** — `publish_node` (Phase 3) hands the MP4 URL to the
+   YouTube Data API v3 `videos.insert` upload, with niche-tuned title,
+   description (incl. affiliate links), tags, and thumbnail.
+7. **Telemetry loop** — YouTube Analytics polled hourly; per-video
+   performance writes back to the topic row for the script node's
+   future prompt context.
+
+This is the **assembly line**. Throughput is bounded by the slowest
+external API (Shotstack rendering, typically). A single operator can
+run multiple parallel pipelines limited only by Shotstack/ElevenLabs
+rate caps and YouTube's upload quota (Phase 4 introduces multi-channel
+sharding to lift the upload ceiling).
+
+---
+
+## 8. Phasing & Roadmap
+
+| Phase | Scope                                                                           | Status     |
+| ----- | ------------------------------------------------------------------------------- | ---------- |
+| 1     | LangGraph backend scaffold, SSE bus, event schema, repo skeleton                | Implicit prereq (covered by this PR's bus + graph) |
+| **2** | **Shotstack + ElevenLabs + video_assembly_node + CSV ingestion + Live View**    | **This PR** |
+| 3     | LLM-backed `script_node`, real publish to YouTube, dynamic B-roll search        | Next       |
+| 4     | Multi-channel sharding, performance feedback loop, A/B title generation         | Later      |
+| 5     | Multi-niche tenancy, per-tenant quotas, billing                                 | Later      |
+
+---
+
+## 9. Verification
+
+The Phase 2 deliverable is verified by:
+
+```bash
+python -m swarm.demo            # prints sample Shotstack JSON + runs dry pipeline
+python -m swarm.demo --csv swarm/sample_topics.csv
+pytest tests/test_swarm.py -q
+```
+
+Expected: the demo prints a fully formed Shotstack JSON payload, runs
+all five nodes in dry-run, and exits 0 with `nodes executed:
+['ingest', 'script', 'voiceover', 'video_assembly', 'publish']`.
+
+---
+
+## 10. Risk Register
+
+| Risk                              | Mitigation                                                       |
+| --------------------------------- | ---------------------------------------------------------------- |
+| Shotstack rate limit / outage     | Supervisor `FALLBACK`; Phase 3 queue for deferred re-render      |
+| ElevenLabs voice drift            | Pin `model_id` + `voice_settings` per channel; snapshot in state |
+| Runaway retry burns budget        | Per-node caps + `MAX_TOTAL_RETRIES` circuit breaker              |
+| LLM hallucinates harmful finance advice | Fact-check sub-crew in `script_node` (Phase 3 CrewAI insert) |
+| YouTube ToS — automation policy   | Per-channel daily caps; manual sample audits; honest disclosure  |
+| Stock B-roll licensing            | Stick to whitelisted CC0/owned pools; track provenance in state  |
