@@ -310,10 +310,11 @@ sharding to lift the upload ceiling).
 | Phase | Scope                                                                           | Status     |
 | ----- | ------------------------------------------------------------------------------- | ---------- |
 | 1     | LangGraph backend scaffold, SSE bus, event schema, repo skeleton                | Done (Phase 2 PR) |
-| 2     | Shotstack + ElevenLabs + video_assembly_node + CSV ingestion + Live View        | Done       |
-| **3** | **LLM `script_node`, generative B-roll, YouTube `publish_node`**                | **This PR** |
-| 4     | Edge-TTS voiceover fallback, deferred-render queue, performance feedback loop   | Next       |
-| 5     | Multi-channel sharding, A/B title generation, multi-niche tenancy, billing      | Later      |
+| 2     | Shotstack + ElevenLabs + video_assembly_node + CSV ingestion + Live View HTML   | Done       |
+| 3     | LLM `script_node`, generative B-roll, YouTube `publish_node`                    | Done       |
+| **4** | **React Live View dashboard + analytics & feedback agent (CSV self-loop)**      | **This PR** |
+| 5     | Edge-TTS voiceover fallback, deferred-render queue, multi-channel sharding      | Next       |
+| 6     | Multi-niche tenancy, per-tenant quotas, billing                                 | Later      |
 
 ---
 
@@ -430,6 +431,147 @@ YOUTUBE_CLIENT_ID          # publish_node
 YOUTUBE_CLIENT_SECRET      # publish_node
 YOUTUBE_REFRESH_TOKEN      # publish_node (one-time OAuth setup)
 YOUTUBE_DEFAULT_PRIVACY    # optional override of "private"
+```
+
+---
+
+## 12. Phase 4: Live View dashboard + continuous-optimisation loop
+
+Phase 4 ships two complementary deliverables: a **React dashboard**
+that visualises the SSE stream in real time, and an **analytics agent**
+that closes the loop between what we publish and what the swarm
+publishes next.
+
+### 12.1 React Live View — `dashboard/`
+
+Stack: Vite + React 18 + TypeScript + vitest. Mount point: any
+FastAPI app that already calls `swarm.sse.attach_live_view(...)`.
+
+Layout:
+
+```
+dashboard/
+├── package.json / tsconfig / vite.config.ts
+├── src/
+│   ├── App.tsx                       composition root
+│   ├── hooks/useSwarmStream.ts       SSE consumer + state aggregator
+│   ├── components/
+│   │   ├── MetricsBar.tsx            top header tiles
+│   │   ├── RunGrid.tsx + RunCard.tsx active-run cards
+│   │   └── SupervisorLog.tsx         intervention timeline
+│   ├── lib/format.ts                 USD / token / time formatters
+│   └── styles.css
+```
+
+**Why batching with `requestAnimationFrame`.** A naive
+`useState` write inside `EventSource.onmessage` would re-render on
+every event. The swarm fans out 5–50 events/sec under load, and at
+50 events/sec a 16 ms paint budget is exceeded by the React layout
+alone. The hook instead pushes events into a `useRef` buffer and
+calls `requestAnimationFrame` to flush. The reducer applies the
+batch atomically — connection-state, run summaries, intervention
+log, and metrics all update in one paint — so the dashboard stays
+60 fps even when the swarm goes wide. `cancelAnimationFrame` on
+unmount prevents leaked scheduled flushes.
+
+**Auto-reconnect with explicit backoff.** Browser EventSource has
+opaque retry semantics: no visibility into attempt count, no
+configurable delay. The hook owns the lifecycle: `onerror` closes
+the socket, increments `reconnectRef`, computes the next delay
+(`min(initialReconnectMs * 2^(attempt-1), 30_000)`), and schedules
+a `setTimeout` to reconnect. Connection state surfaces in
+`ConnectionState` so the header shows
+"reconnecting (attempt 3, retry in 4s)" — operators see drops
+instead of guessing.
+
+**What it visualises.**
+- *MetricsBar:* events/s rolling 5 s window, active runs,
+  completed / aborted count, total cost USD, input / output tokens,
+  supervisor R / F / A counters. Goes red when an abort happens.
+- *RunCard:* per-run card with node-state ribbon
+  (`ingest → script → voice → b-roll → render → publish`), token /
+  cost tags, retry / fallback badges, and the published YouTube
+  URL once `publish.complete` fires.
+- *SupervisorLog:* timeline of every non-`continue` supervisor
+  decision with attempt, backoff delay, and originating error.
+
+Tests live in `src/hooks/useSwarmStream.test.ts` and exercise the
+buffering, supervisor-event handling, exponential-backoff
+reconnect, and malformed-payload tolerance against a fake
+EventSource. `npm test` → 4 cases passing; `npm run build`
+produces a 49 KB gzipped SPA suitable for serving via FastAPI
+`StaticFiles` alongside `/swarm/events`.
+
+### 12.2 Token + cost telemetry
+
+Every paid node now emits structured events the dashboard renders:
+
+- `script_node` → `node.tokens` (`provider`, `model`,
+  `input_tokens`, `output_tokens`, `cost_usd`) sourced from the
+  Anthropic / OpenAI SDK usage block.
+- `voiceover_node` → `node.cost` (`provider=elevenlabs`,
+  `units={characters}`, USD via `swarm/pricing.py`).
+- `broll_node` → `node.cost` (`provider=sora|veo|placeholder`,
+  `units={seconds}`).
+- `video_assembly_node` → `node.cost` (`provider=shotstack`,
+  `units={output_seconds}`).
+
+`swarm/pricing.py` centralises list-price rate cards
+(LLM-per-million-tokens, ElevenLabs $/1k chars, Shotstack
+$/output-minute, Sora/Veo $/second). Replace with billed-actuals in
+Phase 5 once each provider's billing API is plumbed in.
+
+### 12.3 Analytics & feedback agent — `swarm/analytics_agent.py`
+
+Out-of-band cron job (not a graph node) that closes the loop:
+
+1. **Read** `~/.hermes/swarm/published.jsonl` — every successful
+   `publish_node` call appends a row via `swarm.published_log`.
+   Dry-run uploads are excluded so the manifest stays clean.
+2. **Fetch** YouTube Analytics v2 reports per video for the last N
+   days (default 14): `views`, `estimatedMinutesWatched`,
+   `averageViewDuration`, `annotationClickThroughRate`, `likes`,
+   `comments`. OAuth uses the same refresh-token pattern as
+   `publish_agent` — the token must include the
+   `yt-analytics.readonly` scope.
+3. **Summarise** via Claude / OpenAI. The LLM gets the per-video
+   metrics matrix + the topic each video covered, and returns a
+   strict-JSON `OptimizationReport`:
+   - `winners[]` — top performers with one-line "why".
+   - `losers[]` — underperformers with one-line "why".
+   - `new_topic_ideas[]` — N new `TopicRow`-shaped objects each
+     grounded in a winner signal. Niche is constrained to
+     `{personal_finance, passive_income, stock_education}`;
+     duration is clamped to 15–60 s.
+   - `notes` — 1–2 sentence trend summary.
+4. **Append** the new ideas to `swarm/sample_topics.csv` (or any
+   path the operator passes). Existing topics are skipped
+   case-insensitively, so the cron is idempotent across reruns.
+5. **Emit** `analytics.start / fetched / summarised / complete`
+   events so the dashboard renders cron progress in real time.
+
+Every network call (OAuth, Analytics fetch, LLM) is wrapped in
+`_with_backoff`, the same exp-backoff-with-jitter envelope used by
+the main supervisor. Dry-run mode mocks both the API and the LLM
+with deterministic stubs (sha1-keyed so values are stable across
+processes), enabling offline CI.
+
+CLI: `python -m swarm.cron_analytics --csv swarm/sample_topics.csv
+[--published-log ...] [--report-dir ...] [--live]`.
+
+### 12.4 Verification
+
+```
+$ python -m pytest tests/test_swarm_analytics.py -q
+16 passed
+$ npm --prefix dashboard test
+4 passed
+$ npm --prefix dashboard run build
+✓ built in <1s (49 KB gzipped)
+$ python -m swarm.cron_analytics --csv /tmp/topics.csv \
+    --published-log /tmp/pub.jsonl --report-dir /tmp/reports
+analyzed videos      : 3
+new topics appended  : 4
 ```
 
 ---

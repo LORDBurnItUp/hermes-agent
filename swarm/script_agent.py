@@ -105,17 +105,30 @@ def generate_script(
     api_key: Optional[str] = None,
     timeout: int = DEFAULT_TIMEOUT_S,
     dry_run: bool = False,
+    run_id: Optional[str] = None,
 ) -> ScriptBundle:
     """Generate a script bundle for ``video_topic``.
 
     ``dry_run=True`` returns a deterministic stub bundle so the pipeline
     and tests run without API keys or credits.
+
+    When ``run_id`` is supplied, token-usage and cost-estimate events
+    are published to the Live View bus so the dashboard can render
+    real-time throughput and cost accumulation.
     """
     if not video_topic or not video_topic.strip():
         raise ScriptGenerationError("video_topic is required.")
 
     if dry_run:
-        return _stub_bundle(video_topic, niche)
+        bundle = _stub_bundle(video_topic, niche)
+        _emit_token_event(
+            run_id=run_id,
+            provider="stub",
+            model="stub",
+            input_tokens=0,
+            output_tokens=0,
+        )
+        return bundle
 
     provider = (provider or os.environ.get("SWARM_SCRIPT_PROVIDER") or DEFAULT_PROVIDER).lower()
     words = max(int(duration_seconds * 2.5), 20)  # ~150 wpm spoken
@@ -127,12 +140,19 @@ def generate_script(
     )
 
     if provider == PROVIDER_ANTHROPIC:
-        raw = _call_anthropic(user_prompt, model=model, api_key=api_key, timeout=timeout)
+        raw, usage = _call_anthropic(user_prompt, model=model, api_key=api_key, timeout=timeout)
     elif provider == PROVIDER_OPENAI:
-        raw = _call_openai(user_prompt, model=model, api_key=api_key, timeout=timeout)
+        raw, usage = _call_openai(user_prompt, model=model, api_key=api_key, timeout=timeout)
     else:
         raise ScriptGenerationError(f"Unknown script provider: {provider!r}")
 
+    _emit_token_event(
+        run_id=run_id,
+        provider=provider,
+        model=usage.get("model", model or "unknown"),
+        input_tokens=int(usage.get("input_tokens", 0)),
+        output_tokens=int(usage.get("output_tokens", 0)),
+    )
     return _parse_bundle(raw)
 
 
@@ -141,7 +161,13 @@ def generate_script(
 # ---------------------------------------------------------------------------
 
 
-def _call_anthropic(prompt: str, *, model: Optional[str], api_key: Optional[str], timeout: int) -> str:
+def _call_anthropic(
+    prompt: str,
+    *,
+    model: Optional[str],
+    api_key: Optional[str],
+    timeout: int,
+) -> "tuple[str, Dict[str, Any]]":
     try:
         import anthropic  # type: ignore
     except ImportError as exc:
@@ -170,10 +196,23 @@ def _call_anthropic(prompt: str, *, model: Optional[str], api_key: Optional[str]
     text = "".join(getattr(b, "text", "") for b in parts if getattr(b, "type", "") == "text")
     if not text.strip():
         raise ScriptGenerationError("Anthropic returned empty content.")
-    return text
+
+    usage_obj = getattr(resp, "usage", None)
+    usage = {
+        "model": model_id,
+        "input_tokens": getattr(usage_obj, "input_tokens", 0) or 0,
+        "output_tokens": getattr(usage_obj, "output_tokens", 0) or 0,
+    }
+    return text, usage
 
 
-def _call_openai(prompt: str, *, model: Optional[str], api_key: Optional[str], timeout: int) -> str:
+def _call_openai(
+    prompt: str,
+    *,
+    model: Optional[str],
+    api_key: Optional[str],
+    timeout: int,
+) -> "tuple[str, Dict[str, Any]]":
     try:
         import openai  # type: ignore
     except ImportError as exc:
@@ -201,7 +240,45 @@ def _call_openai(prompt: str, *, model: Optional[str], api_key: Optional[str], t
     choice = (resp.choices or [None])[0]
     if not choice or not choice.message or not choice.message.content:
         raise ScriptGenerationError("OpenAI returned no content.")
-    return choice.message.content
+
+    usage_obj = getattr(resp, "usage", None)
+    usage = {
+        "model": model_id,
+        "input_tokens": getattr(usage_obj, "prompt_tokens", 0) or 0,
+        "output_tokens": getattr(usage_obj, "completion_tokens", 0) or 0,
+    }
+    return choice.message.content, usage
+
+
+def _emit_token_event(
+    *,
+    run_id: Optional[str],
+    provider: str,
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+) -> None:
+    """Publish a token/cost event so the Live View dashboard can render it."""
+    if not run_id:
+        return
+    try:
+        from swarm import events  # avoid import cycle at module load
+        from swarm.pricing import estimate_llm_cost_usd
+    except ImportError:
+        return
+    cost = estimate_llm_cost_usd(model, input_tokens, output_tokens)
+    events.publish(
+        {
+            "type": "node.tokens",
+            "run_id": run_id,
+            "node": "script",
+            "provider": provider,
+            "model": model,
+            "input_tokens": int(input_tokens),
+            "output_tokens": int(output_tokens),
+            "cost_usd": round(cost, 6),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -16,6 +16,12 @@ Public surface:
 from swarm.state import SwarmState, NodeStatus, SupervisorDecision
 from swarm.csv_ingest import ingest_topics_from_csv, TopicRow
 from swarm.graph import build_graph, run_pipeline
+from swarm.analytics_agent import (
+    OptimizationReport,
+    TopicIdea,
+    MetricsRow,
+    run_analytics_cycle,
+)
 
 __all__ = [
     "SwarmState",
@@ -25,4 +31,8 @@ __all__ = [
     "ingest_topics_from_csv",
     "build_graph",
     "run_pipeline",
+    "OptimizationReport",
+    "TopicIdea",
+    "MetricsRow",
+    "run_analytics_cycle",
 ]

@@ -24,7 +24,7 @@ import time
 import uuid
 from typing import Any, Callable, Dict, Optional
 
-from swarm import events
+from swarm import events, pricing
 from swarm.audio_agent import AudioGenerationError, generate_voiceover
 from swarm.broll_agent import BRollGenerationError, generate_broll
 from swarm.publish_agent import PublishError, publish_to_youtube
@@ -91,6 +91,7 @@ def script_node(state: SwarmState, *, dry_run: bool = False) -> SwarmState:
             niche=state.get("niche") or "personal_finance",
             duration_seconds=30.0,
             dry_run=dry_run,
+            run_id=state.get("run_id"),
         )
         state["video_title"] = bundle.video_title
         state["script_caption"] = bundle.script_caption
@@ -112,6 +113,13 @@ def voiceover_node(state: SwarmState, *, dry_run: bool = False) -> SwarmState:
         )
         state["audio_url"] = result.audio_url
         state["audio_duration_seconds"] = result.duration_seconds
+        _emit_cost(
+            state,
+            node="voiceover",
+            provider="elevenlabs",
+            cost_usd=pricing.estimate_elevenlabs_cost_usd(len(state.get("script") or "")),
+            units={"characters": len(state.get("script") or "")},
+        )
     return state
 
 
@@ -129,6 +137,13 @@ def broll_node(state: SwarmState, *, dry_run: bool = False) -> SwarmState:
         )
         state["broll_url"] = result.url
         state["broll_provider"] = result.provider
+        _emit_cost(
+            state,
+            node="broll",
+            provider=result.provider,
+            cost_usd=pricing.estimate_broll_cost_usd(result.provider, result.duration_seconds or 0),
+            units={"seconds": result.duration_seconds or 0},
+        )
     return state
 
 
@@ -164,6 +179,13 @@ def video_assembly_node(state: SwarmState, *, dry_run: bool = False) -> SwarmSta
         rendering = submit_render(payload, dry_run=dry_run)
         state["shotstack_render_id"] = rendering.render_id
         state["shotstack_status"] = rendering.status
+        _emit_cost(
+            state,
+            node="video_assembly",
+            provider="shotstack",
+            cost_usd=pricing.estimate_shotstack_cost_usd(30.0),
+            units={"output_seconds": 30.0},
+        )
     return state
 
 
@@ -197,12 +219,55 @@ def publish_node(state: SwarmState, *, dry_run: bool = False) -> SwarmState:
                 "privacy": publish.privacy,
             }
         )
+        _record_published(state)
     return state
+
+
+def _record_published(state: SwarmState) -> None:
+    """Append a row to the published log so analytics_agent has a manifest.
+
+    Skips dry-run uploads (their video_id starts with 'dryrun-yt-') so
+    we don't pollute the real history. Errors are swallowed — losing a
+    log row should never abort a successful publish.
+    """
+    from swarm.published_log import append_published
+
+    video_id = state.get("published_video_id") or ""
+    if not video_id or video_id.startswith("dryrun-yt-"):
+        return
+    try:
+        append_published(
+            video_id=video_id,
+            run_id=state.get("run_id") or "",
+            topic=state.get("video_topic") or "",
+            title=state.get("video_title") or "",
+            niche=state.get("niche") or "",
+            tags=state.get("video_tags") or [],
+            url=state.get("published_url") or "",
+        )
+    except Exception as exc:  # pragma: no cover - non-fatal
+        logger.warning("published_log write failed: %s", exc)
 
 
 # ---------------------------------------------------------------------------
 # Supervisor + routing
 # ---------------------------------------------------------------------------
+
+
+def _emit_cost(state: SwarmState, *, node: str, provider: str, cost_usd: float, units: Dict[str, Any]) -> None:
+    """Emit a node.cost event to the Live View bus."""
+    if cost_usd <= 0 and not units:
+        return
+    events.publish(
+        {
+            "type": "node.cost",
+            "run_id": state.get("run_id"),
+            "node": node,
+            "provider": provider,
+            "cost_usd": round(float(cost_usd), 6),
+            "units": units,
+        }
+    )
 
 
 def _supervise(node: str) -> Callable[[SwarmState], SwarmState]:
