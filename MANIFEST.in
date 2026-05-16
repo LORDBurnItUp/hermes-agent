@@ -1,4 +1,6 @@
 graft skills
 graft optional-skills
+include swarm/live_view.html
+include swarm/sample_topics.csv
 global-exclude __pycache__
 global-exclude *.py[cod]
